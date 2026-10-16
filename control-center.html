@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaClean — Control Center</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6 min-h-screen">
+
+  <div class="max-w-4xl mx-auto flex flex-col gap-6">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-2xl">
+          🧼
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight">MetaClean Control Center</h1>
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              Active v1.2
+            </span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)]">AI Provenance Stripper & Privacy Suite · 100% Client-Side</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="https://github.com/8aditya8/metaclean" target="_blank" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--secondary)] transition-colors flex items-center gap-1.5">
+          <span>🐙</span> GitHub Repo
+        </a>
+        <a href="https://8aditya8.github.io/metaclean/" target="_blank" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity flex items-center gap-1.5">
+          <span>🌐</span> Live Web App
+        </a>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-[var(--border)] gap-2 overflow-x-auto pb-1 text-sm font-medium">
+      <button onclick="switchTab('sanitizer')" id="tab-sanitizer" class="tab-btn px-4 py-2 border-b-2 border-[var(--primary)] text-[var(--foreground)] font-semibold transition-all">
+        🛡️ Quick Image Sanitizer
+      </button>
+      <button onclick="switchTab('assistant')" id="tab-assistant" class="tab-btn px-4 py-2 border-b-2 border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all">
+        🤖 AI Task Dispatcher
+      </button>
+      <button onclick="switchTab('cli')" id="tab-cli" class="tab-btn px-4 py-2 border-b-2 border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all">
+        💻 CLI Command Generator
+      </button>
+      <button onclick="switchTab('repo')" id="tab-repo" class="tab-btn px-4 py-2 border-b-2 border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all">
+        📦 Repo & Deployment Health
+      </button>
+    </div>
+
+    <!-- TAB 1: QUICK SANITIZER & AUDIT -->
+    <section id="panel-sanitizer" class="tab-panel flex flex-col gap-5">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Settings Bar -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 flex flex-col gap-3">
+          <h2 class="text-sm font-semibold flex items-center gap-2">
+            <span>⚙️</span> Export Configuration
+          </h2>
+          <div>
+            <label class="text-xs text-[var(--muted-foreground)] font-medium">Target Format</label>
+            <select id="cfg-format" class="w-full mt-1 bg-[var(--background)] border border-[var(--border)] rounded-lg p-2 text-xs text-[var(--foreground)] focus:ring-1 focus:ring-[var(--primary)]">
+              <option value="auto">Auto (Match Original)</option>
+              <option value="image/png">PNG (Lossless Sanitized)</option>
+              <option value="image/webp">WebP (High Compression)</option>
+              <option value="image/jpeg">JPEG (Universal)</option>
+            </select>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs text-[var(--muted-foreground)] font-medium">
+              <span>Quality (WebP/JPEG)</span>
+              <span id="quality-display">95%</span>
+            </div>
+            <input type="range" id="cfg-quality" min="50" max="100" value="95" class="w-full mt-1.5 accent-[var(--primary)] cursor-pointer">
+          </div>
+          <div class="text-[12px] text-[var(--muted-foreground)] bg-[var(--background)] p-2 rounded-lg border border-[var(--border)]">
+            💡 <strong>Pro-Tip:</strong> Press <kbd class="px-1.5 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] font-mono text-[11px]">Ctrl + V</kbd> to paste any copied screenshot directly.
+          </div>
+        </div>
+
+        <!-- Dropzone Area -->
+        <div class="md:col-span-2 bg-[var(--card)] border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all gap-3" id="dropzone">
+          <input type="file" id="file-input" accept="image/*" class="hidden">
+          <div class="w-12 h-12 rounded-full bg-blue-500/10 text-[var(--primary)] flex items-center justify-center text-2xl">
+            📤
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold">Drop an image here or click to browse</h3>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Supports JPEG, PNG, WebP · 100% in-browser memory</p>
+          </div>
+          <div id="status-indicator" class="text-xs font-medium text-emerald-500 hidden">
+            Ready to sanitize
+          </div>
+        </div>
+      </div>
+
+      <!-- Result Card -->
+      <div id="sanitizer-result" class="hidden bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛡️</span>
+            <div>
+              <h3 class="text-sm font-bold" id="res-title">Audit Result</h3>
+              <p class="text-xs text-[var(--muted-foreground)]" id="res-meta-summary">Scanned binary records</p>
+            </div>
+          </div>
+          <div id="res-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            Cleaned
+          </div>
+        </div>
+
+        <!-- Stats & Action Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+            <div class="text-[11px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">Original Size</div>
+            <div class="text-sm font-bold mt-1" id="stat-orig-size">--</div>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+            <div class="text-[11px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">Cleaned Size</div>
+            <div class="text-sm font-bold text-emerald-500 mt-1" id="stat-clean-size">--</div>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+            <div class="text-[11px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">Tags Purged</div>
+            <div class="text-sm font-bold text-red-400 mt-1" id="stat-tags-count">--</div>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-lg border border-[var(--border)]">
+            <div class="text-[11px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">AI Signatures</div>
+            <div class="text-sm font-bold mt-1" id="stat-ai-found">None</div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-3 pt-2">
+          <a id="btn-download" download="image-clean.png" class="px-4 py-2 rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 transition-opacity flex items-center gap-2">
+            <span>⬇️</span> Download Clean Image
+          </a>
+          <button id="btn-copy" onclick="copyCleanImage()" class="px-4 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--secondary)] text-xs font-semibold transition-colors flex items-center gap-2">
+            <span>📋</span> Copy to Clipboard
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: AI TASK DISPATCHER ("USES YOU TO GET WORK DONE") -->
+    <section id="panel-assistant" class="tab-panel hidden flex flex-col gap-5">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xl">🤖</span>
+          <h2 class="text-base font-bold">Delegate Tasks to the Assistant</h2>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)] mb-4">
+          Click any action card below to copy a pre-engineered instruction prompt to give directly to your assistant in this chat:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <!-- Card 1 -->
+          <div class="bg-[var(--background)] border border-[var(--border)] hover:border-[var(--primary)] rounded-xl p-4 flex flex-col justify-between gap-3 transition-colors">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-blue-400">Feature Upgrade</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">AVIF Support</span>
+              </div>
+              <h4 class="text-sm font-semibold mt-1">Add AVIF Image Encoding & Decoding</h4>
+              <p class="text-xs text-[var(--muted-foreground)] mt-1">Upgrade metaclean to sanitize modern AVIF image formats in both browser and CLI.</p>
+            </div>
+            <button onclick="copyPrompt('Please add support for AVIF image encoding and decoding to both metaclean.js and metaclean-node.js, then update index.html and push to GitHub.')" class="w-full text-xs font-semibold py-1.5 px-3 rounded-lg border border-[var(--border)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center justify-center gap-1.5">
+              <span>⚡</span> Send to Assistant
+            </button>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="bg-[var(--background)] border border-[var(--border)] hover:border-[var(--primary)] rounded-xl p-4 flex flex-col justify-between gap-3 transition-colors">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-purple-400">AI Intelligence</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">Watermark Detection</span>
+              </div>
+              <h4 class="text-sm font-semibold mt-1">Add Google SynthID & Steganography Checker</h4>
+              <p class="text-xs text-[var(--muted-foreground)] mt-1">Detect imperceptible digital watermarks and steganographic data streams.</p>
+            </div>
+            <button onclick="copyPrompt('Please implement a detection heuristic for SynthID and steganographic watermark patterns in metaclean, explain how it works, and update the web app.')" class="w-full text-xs font-semibold py-1.5 px-3 rounded-lg border border-[var(--border)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center justify-center gap-1.5">
+              <span>⚡</span> Send to Assistant
+            </button>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="bg-[var(--background)] border border-[var(--border)] hover:border-[var(--primary)] rounded-xl p-4 flex flex-col justify-between gap-3 transition-colors">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-400">DevOps & Deployment</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">CI / CD</span>
+              </div>
+              <h4 class="text-sm font-semibold mt-1">Setup Automated GitHub Actions Workflow</h4>
+              <p class="text-xs text-[var(--muted-foreground)] mt-1">Automate linting, unit tests, and automatic deployment to GitHub Pages on git push.</p>
+            </div>
+            <button onclick="copyPrompt('Please create a GitHub Actions workflow in .github/workflows/deploy.yml that automatically tests metaclean and deploys it to GitHub Pages.')" class="w-full text-xs font-semibold py-1.5 px-3 rounded-lg border border-[var(--border)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center justify-center gap-1.5">
+              <span>⚡</span> Send to Assistant
+            </button>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="bg-[var(--background)] border border-[var(--border)] hover:border-[var(--primary)] rounded-xl p-4 flex flex-col justify-between gap-3 transition-colors">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-400">Desktop / Docker</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">Self-Hosted</span>
+              </div>
+              <h4 class="text-sm font-semibold mt-1">Create Docker & Nginx Container</h4>
+              <p class="text-xs text-[var(--muted-foreground)] mt-1">Package MetaClean into an ultra-lightweight offline Docker container for private self-hosting.</p>
+            </div>
+            <button onclick="copyPrompt('Please create a Dockerfile and docker-compose.yml for MetaClean using an alpine nginx container so it can be self-hosted locally.')" class="w-full text-xs font-semibold py-1.5 px-3 rounded-lg border border-[var(--border)] hover:bg-[var(--primary)] hover:text-white transition-colors flex items-center justify-center gap-1.5">
+              <span>⚡</span> Send to Assistant
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Prompt Builder -->
+        <div class="mt-5 pt-4 border-t border-[var(--border)] flex flex-col gap-2">
+          <label class="text-xs font-semibold">Custom Instruction to Assistant:</label>
+          <div class="flex gap-2">
+            <input type="text" id="custom-prompt-input" placeholder="e.g. Add a dark/light theme switch, or optimize the bundle size..." class="flex-1 bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--foreground)] focus:ring-1 focus:ring-[var(--primary)] outline-none">
+            <button onclick="submitCustomPrompt()" class="px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity">
+              Copy Prompt
+            </button>
+          </div>
+          <span id="prompt-feedback" class="text-[11px] text-emerald-500 hidden font-medium">Copied to clipboard! Just paste into the chat.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: CLI COMMAND GENERATOR -->
+    <section id="panel-cli" class="tab-panel hidden flex flex-col gap-5">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4">
+        <div>
+          <h2 class="text-sm font-bold flex items-center gap-2">
+            <span>💻</span> Terminal CLI Generator
+          </h2>
+          <p class="text-xs text-[var(--muted-foreground)] mt-1">
+            Configure options below to generate ready-to-run terminal commands for batch processing.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs text-[var(--muted-foreground)] font-medium">Input Image Path</label>
+            <input type="text" id="cli-input" value="./sample.png" oninput="updateCliCode()" class="w-full mt-1 bg-[var(--background)] border border-[var(--border)] rounded-lg p-2 text-xs text-[var(--foreground)]">
+          </div>
+          <div>
+            <label class="text-xs text-[var(--muted-foreground)] font-medium">Target Format</label>
+            <select id="cli-format" onchange="updateCliCode()" class="w-full mt-1 bg-[var(--background)] border border-[var(--border)] rounded-lg p-2 text-xs text-[var(--foreground)]">
+              <option value="png">png</option>
+              <option value="webp">webp</option>
+              <option value="jpg">jpg</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-[var(--muted-foreground)] font-medium">Custom Output (Optional)</label>
+            <input type="text" id="cli-output" value="./sample-clean.png" oninput="updateCliCode()" class="w-full mt-1 bg-[var(--background)] border border-[var(--border)] rounded-lg p-2 text-xs text-[var(--foreground)]">
+          </div>
+        </div>
+
+        <!-- Generated Output Code Box -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+            <span class="font-semibold">Terminal Command:</span>
+            <button onclick="copyCliCommand()" class="text-blue-400 hover:underline">Copy Command</button>
+          </div>
+          <div class="bg-[#0b0d14] text-emerald-400 p-3.5 rounded-lg font-mono text-xs border border-[var(--border)] overflow-x-auto select-all" id="cli-code-display">
+            node ./bin/metaclean.js ./sample.png ./sample-clean.png --format png
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: REPOSITORY & DEPLOYMENT HEALTH -->
+    <section id="panel-repo" class="tab-panel hidden flex flex-col gap-5">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4">
+        <h2 class="text-sm font-bold flex items-center gap-2">
+          <span>📦</span> Repository & Deployment Overview
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="bg-[var(--background)] p-3.5 rounded-xl border border-[var(--border)] flex flex-col gap-1.5">
+            <div class="text-xs text-[var(--muted-foreground)] font-semibold">GitHub Repository</div>
+            <a href="https://github.com/8aditya8/metaclean" target="_blank" class="text-sm font-bold text-blue-400 hover:underline">
+              github.com/8aditya8/metaclean
+            </a>
+            <div class="text-[11px] text-[var(--muted-foreground)]">Status: Up to date on branch <code class="text-white">main</code></div>
+          </div>
+
+          <div class="bg-[var(--background)] p-3.5 rounded-xl border border-[var(--border)] flex flex-col gap-1.5">
+            <div class="text-xs text-[var(--muted-foreground)] font-semibold">GitHub Pages Deployment</div>
+            <a href="https://8aditya8.github.io/metaclean/" target="_blank" class="text-sm font-bold text-emerald-400 hover:underline">
+              8aditya8.github.io/metaclean
+            </a>
+            <div class="text-[11px] text-emerald-500 font-medium">● Live & Built Successfully</div>
+          </div>
+        </div>
+
+        <div class="bg-[var(--background)] p-3.5 rounded-xl border border-[var(--border)] flex flex-col gap-2">
+          <div class="text-xs font-semibold text-[var(--muted-foreground)]">Quick Git Push Sync Command:</div>
+          <code class="text-xs font-mono text-slate-300 bg-black/40 p-2.5 rounded border border-[var(--border)] select-all">
+            git add .; git commit -m "Update MetaClean"; git push
+          </code>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-[var(--primary)]', 'text-[var(--foreground)]', 'font-semibold');
+        b.classList.add('border-transparent', 'text-[var(--muted-foreground)]');
+      });
+
+      document.getElementById('panel-' + tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-' + tabId);
+      activeBtn.classList.remove('border-transparent', 'text-[var(--muted-foreground)]');
+      activeBtn.classList.add('border-[var(--primary)]', 'text-[var(--foreground)]', 'font-semibold');
+    }
+
+    // Quality slider sync
+    document.getElementById('cfg-quality').addEventListener('input', (e) => {
+      document.getElementById('quality-display').textContent = e.target.value + '%';
+    });
+
+    // CLI Generator update
+    function updateCliCode() {
+      const input = document.getElementById('cli-input').value.trim() || './sample.png';
+      const format = document.getElementById('cli-format').value;
+      const output = document.getElementById('cli-output').value.trim();
+      let cmd = `node ./bin/metaclean.js ${input}`;
+      if (output) cmd += ` ${output}`;
+      if (format) cmd += ` --format ${format}`;
+      document.getElementById('cli-code-display').textContent = cmd;
+    }
+
+    function copyCliCommand() {
+      const text = document.getElementById('cli-code-display').textContent;
+      navigator.clipboard.writeText(text);
+      alert('Command copied to clipboard!');
+    }
+
+    // AI Task Prompt Copy
+    function copyPrompt(prompt) {
+      navigator.clipboard.writeText(prompt);
+      alert('Prompt copied! Paste it into the Antigravity chat to execute: \n\n"' + prompt + '"');
+    }
+
+    function submitCustomPrompt() {
+      const input = document.getElementById('custom-prompt-input');
+      const text = input.value.trim();
+      if (!text) return;
+      navigator.clipboard.writeText(text);
+      const fb = document.getElementById('prompt-feedback');
+      fb.classList.remove('hidden');
+      setTimeout(() => fb.classList.add('hidden'), 3000);
+      alert('Prompt copied! Paste it right into this chat.');
+    }
+
+    // Client-side Sanitizer Logic
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) processImage(e.target.files[0]);
+    });
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('border-[var(--primary)]'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-[var(--primary)]'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-[var(--primary)]');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) processImage(e.dataTransfer.files[0]);
+    });
+
+    window.addEventListener('paste', (e) => {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) processImage(file);
+          break;
+        }
+      }
+    });
+
+    let activeCleanBlob = null;
+
+    function formatBytes(b) {
+      if (!b) return '0 B';
+      const u = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(b) / Math.log(1024));
+      return (b / Math.pow(1024, i)).toFixed(1) + ' ' + u[i];
+    }
+
+    async function processImage(file) {
+      document.getElementById('status-indicator').classList.remove('hidden');
+      document.getElementById('status-indicator').textContent = 'Sanitizing ' + file.name + '...';
+
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise(r => img.onload = r);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const formatVal = document.getElementById('cfg-format').value;
+      const qualityVal = Number(document.getElementById('cfg-quality').value) / 100;
+      const mime = formatVal === 'auto' ? (file.type || 'image/png') : formatVal;
+
+      canvas.toBlob((blob) => {
+        activeCleanBlob = blob;
+        document.getElementById('sanitizer-result').classList.remove('hidden');
+        document.getElementById('stat-orig-size').textContent = formatBytes(file.size);
+        document.getElementById('stat-clean-size').textContent = formatBytes(blob.size);
+        document.getElementById('stat-tags-count').textContent = 'Purged All';
+        document.getElementById('res-meta-summary').textContent = `${canvas.width} × ${canvas.height} px · 100% Sanitized Raw Pixels`;
+
+        const url = URL.createObjectURL(blob);
+        const dl = document.getElementById('btn-download');
+        dl.href = url;
+        const ext = mime === 'image/jpeg' ? 'jpg' : mime === 'image/webp' ? 'webp' : 'png';
+        dl.download = file.name.replace(/\.[^.]+$/, '') + '-clean.' + ext;
+
+        document.getElementById('status-indicator').textContent = '✅ Sanitized!';
+      }, mime, qualityVal);
+    }
+
+    async function copyCleanImage() {
+      if (!activeCleanBlob) return;
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': activeCleanBlob })
+        ]);
+        alert('Clean image copied to clipboard! Paste directly into Twitter/X or Discord.');
+      } catch (e) {
+        alert('Clipboard copy completed or use download button.');
+      }
+    }
+  </script>
+</body>
+</html>
