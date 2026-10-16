@@ -1,0 +1,8 @@
+{
+  "title": "MetaClean",
+  "description": "Strip image metadata, EXIF, GPS, and C2PA AI tags locally in the browser.",
+  "icon": "icon.svg",
+  "plugin": {
+    "menu": []
+  }
+}

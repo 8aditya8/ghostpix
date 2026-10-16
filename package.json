@@ -1,0 +1,38 @@
+{
+  "name": "metaclean",
+  "version": "1.0.0",
+  "description": "Strip image metadata, EXIF, GPS, and C2PA AI tags locally in the browser or from the terminal.",
+  "type": "module",
+  "bin": {
+    "metaclean": "./bin/metaclean.js"
+  },
+  "exports": {
+    ".": "./metaclean-node.js",
+    "./browser": "./metaclean.js"
+  },
+  "files": [
+    "assets/",
+    "bin/",
+    "icon.svg",
+    "index.html",
+    "README.md",
+    "metaclean.js",
+    "metaclean-node.js"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "keywords": [
+    "cli",
+    "exif",
+    "image",
+    "metadata",
+    "privacy",
+    "c2pa",
+    "ai-detection",
+    "sanitizer"
+  ],
+  "dependencies": {
+    "sharp": "^0.34.5"
+  }
+}
