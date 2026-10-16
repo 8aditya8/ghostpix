@@ -135,7 +135,7 @@ async function sanitizeOutputBlob(blob, outputType) {
   return new Blob([stripped], { type: outputType });
 }
 
-export async function stripImageMetadata(file) {
+export async function stripImageMetadata(file, options = {}) {
   if (!file || typeof file.arrayBuffer !== "function") {
     throw new Error("Please choose an image file.");
   }
@@ -167,8 +167,12 @@ export async function stripImageMetadata(file) {
 
     const originalName = typeof file.name === "string" && file.name ? file.name : "image";
     const originalType = file.type || "";
-    let outputType = exportableTypes.has(originalType) ? originalType : "image/png";
-    let quality = outputType === "image/jpeg" || outputType === "image/webp" ? 0.95 : undefined;
+    let outputType = options.format && exportableTypes.has(options.format) 
+      ? options.format 
+      : (exportableTypes.has(originalType) ? originalType : "image/png");
+    let quality = options.quality !== undefined 
+      ? options.quality 
+      : (outputType === "image/jpeg" || outputType === "image/webp" ? 0.95 : undefined);
     let blob;
 
     try {

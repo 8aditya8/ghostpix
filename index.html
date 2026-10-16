@@ -3,1753 +3,1117 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaClean — Image Metadata & AI Tag Stripper</title>
-  <meta name="description" content="Strip image metadata in the browser.">
+  <title>MetaClean — AI Provenance & Image Metadata Stripper</title>
+  <meta name="description" content="100% Client-side privacy tool. Remove C2PA 'Made with AI' badges, EXIF, GPS tracking, and prompts from images.">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root {
-      color-scheme: light dark;
-      font-family: "Geist", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --bg: oklch(0.975 0.002 255);
-      --panel: oklch(0.99 0.002 255);
-      --fg: oklch(0.19 0.006 255);
-      --muted: oklch(0.56 0.01 255);
-      --line: oklch(0.89 0.004 255);
-      --line-strong: oklch(0.8 0.006 255);
-      --accent: oklch(0.18 0.006 255);
-      --accent-ink: oklch(0.985 0.001 255);
-      --error: oklch(0.58 0.2 26);
-      --shadow: 0 24px 60px -36px oklch(0.15 0.008 255 / 0.22);
-      --radius: 28px;
+      color-scheme: dark light;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --bg: #090a0f;
+      --surface: #12141c;
+      --surface-hover: #191c28;
+      --border: #222638;
+      --border-focus: #3d4668;
+      --text: #f0f2f8;
+      --text-muted: #8b92aa;
+      --primary: #4f80ff;
+      --primary-hover: #3b6ee8;
+      --primary-glow: rgba(79, 128, 255, 0.25);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.12);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.12);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.12);
+      --radius: 16px;
+      --radius-sm: 8px;
     }
 
-    @media (prefers-color-scheme: dark) {
+    @media (prefers-color-scheme: light) {
       :root {
-        --bg: oklch(0.145 0.006 255);
-        --panel: oklch(0.175 0.006 255);
-        --fg: oklch(0.96 0.002 255);
-        --muted: oklch(0.7 0.01 255);
-        --line: oklch(0.28 0.006 255);
-        --line-strong: oklch(0.38 0.008 255);
-        --accent: oklch(0.95 0.002 255);
-        --accent-ink: oklch(0.14 0.006 255);
-        --shadow: 0 24px 60px -36px rgba(0, 0, 0, 0.55);
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-hover: #f1f5f9;
+        --border: #e2e8f0;
+        --border-focus: #94a3b8;
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --primary-glow: rgba(37, 99, 235, 0.15);
       }
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
-      min-height: 100%;
-    }
-
-    body {
-      min-height: 100vh;
       background: var(--bg);
-      color: var(--fg);
-    }
-
-    .stage {
+      color: var(--text);
       min-height: 100vh;
-      padding: 16px;
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+      line-height: 1.5;
     }
 
-    .dropzone {
-      flex: 1;
-      border: 1px solid var(--line);
+    .container {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .badge-pill span.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .logo-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .logo-title img { width: 40px; height: 40px; }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 580px;
+    }
+
+    /* Options Bar */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 12px 18px;
       border-radius: var(--radius);
-      background: linear-gradient(180deg, var(--panel), color-mix(in oklab, var(--panel) 92%, var(--bg)));
-      box-shadow: var(--shadow);
-      display: grid;
-      place-items: center;
-      padding: 28px;
-      transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
-      outline: none;
+      font-size: 13px;
     }
-
-    .dropzone[data-state="idle"],
-    .dropzone[data-state="ready"],
-    .dropzone[data-state="error"] {
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .toolbar select, .toolbar input[type="range"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      outline: none;
+      font-size: 13px;
       cursor: pointer;
     }
-
-    .dropzone[data-state="processing"] {
-      cursor: progress;
+    .toolbar select:focus {
+      border-color: var(--primary);
     }
 
-    .dropzone[data-active="true"] {
-      border-color: var(--line-strong);
-      transform: scale(0.998);
-      box-shadow: 0 20px 56px -36px oklch(0.15 0.008 255 / 0.3);
-    }
-
-    .dropzone:focus-visible {
-      border-color: var(--line-strong);
-      box-shadow: 0 0 0 4px color-mix(in oklab, var(--fg) 12%, transparent), var(--shadow);
-    }
-
-    .shell {
-      width: min(100%, 520px);
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      justify-items: center;
-      gap: 22px;
+    /* Dropzone Area */
+    .dropzone {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
       text-align: center;
-    }
-
-    .dropzone[data-state="ready"] .shell {
-      width: min(100%, 560px);
-      height: 100%;
-      max-height: 100%;
-      min-height: 0;
-      align-self: stretch;
-      justify-self: center;
-      grid-template-rows: auto auto auto minmax(0, 1fr);
-      align-content: stretch;
-    }
-
-    .mark {
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      display: grid;
-      place-items: center;
-      background: color-mix(in oklab, var(--panel) 94%, var(--bg));
-    }
-
-    .mark svg {
-      width: 24px;
-      height: 24px;
-      display: block;
-    }
-
-    .spinner {
-      width: 22px;
-      height: 22px;
-      border-radius: 999px;
-      border: 1.5px solid color-mix(in oklab, var(--muted) 35%, transparent);
-      border-top-color: var(--fg);
-      animation: spin 0.9s linear infinite;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2.1rem, 7vw, 4.4rem);
-      line-height: 0.95;
-      letter-spacing: -0.08em;
-      font-weight: 700;
-      text-wrap: balance;
-    }
-
-    .subtle {
-      min-height: 1.25rem;
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 0.96rem;
-      line-height: 1.5;
-      word-break: break-word;
-    }
-
-    .summary {
-      width: min(100%, 420px);
-      display: grid;
-      gap: 10px;
-      text-align: left;
-      min-height: 0;
-    }
-
-    .summary[hidden] {
-      display: none;
-    }
-
-    .dropzone[data-state="ready"] .summary {
-      align-self: stretch;
-      overflow: auto;
-      overscroll-behavior: contain;
-      padding-bottom: 2px;
-      scrollbar-gutter: stable;
-    }
-
-    .filename {
-      font-size: 0.82rem;
-      color: var(--muted);
-      line-height: 1.5;
-      word-break: break-word;
-      text-align: center;
-    }
-
-    .metadata {
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: 0;
-      border-top: 1px solid var(--line);
-    }
-
-    .metadata-row {
-      display: grid;
-      grid-template-columns: 108px minmax(0, 1fr);
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--line);
-      align-items: start;
-    }
-
-    .metadata dt {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.78rem;
-      line-height: 1.4;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .metadata dd {
-      margin: 0;
-      font-size: 0.96rem;
-      line-height: 1.55;
-      word-break: break-word;
-    }
-
-    .metadata-empty {
-      padding: 14px 0 0;
-      color: var(--muted);
-      font-size: 0.96rem;
-      line-height: 1.5;
-      text-align: center;
-    }
-
-    .actions {
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: var(--surface-hover);
+      box-shadow: 0 0 32px var(--primary-glow);
+    }
+    .dropzone svg.upload-icon {
+      width: 48px;
+      height: 48px;
+      color: var(--primary);
+      stroke-width: 1.6;
+    }
+    .dropzone-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .dropzone-hint {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .kbd-shortcut {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 11px;
+    }
+
+    /* Result Dashboard */
+    .results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* AI Analysis Alert Card */
+    .audit-card {
+      padding: 18px 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .audit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .audit-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .audit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.25); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.25); }
+    .badge-success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.25); }
+
+    .audit-explanation {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .audit-tags-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .tag-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+      color: var(--text);
+    }
+    .tag-chip.danger {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: var(--danger);
+    }
+
+    /* Comparison & Actions Layout */
+    .inspect-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    @media (max-width: 680px) {
+      .inspect-layout { grid-template-columns: 1fr; }
+    }
+
+    .preview-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    .image-preview-wrapper {
       width: 100%;
+      aspect-ratio: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .image-preview-wrapper img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .preview-stats {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
     }
 
-    .actions[hidden] {
-      display: none;
+    .actions-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: space-between;
     }
+    .stats-diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .diff-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+    }
+    .diff-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .diff-value {
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .diff-value.green { color: var(--success); }
 
-    .button {
-      appearance: none;
-      border: none;
-      border-radius: 999px;
-      min-height: 48px;
-      padding: 0 18px;
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button, a.btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font: inherit;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
       font-weight: 600;
-      text-decoration: none;
-      background: var(--accent);
-      color: var(--accent-ink);
       cursor: pointer;
-      transition: transform 160ms ease;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+    .btn-secondary {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
     }
 
-    .button:hover {
-      transform: translateY(-1px);
+    /* Metadata Tabs & Table */
+    .tabs-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .tabs-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 4px 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -13px;
+      border-radius: 0;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
     }
 
-    .error {
-      color: var(--error);
+    .metadata-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .metadata-table th, .metadata-table td {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .metadata-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      width: 32%;
+    }
+    .metadata-table td {
+      color: var(--text);
+      word-break: break-word;
+      font-family: monospace;
     }
 
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
+    /* Batch Queue */
+    .batch-queue {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .batch-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .batch-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .batch-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+    }
+    .batch-item-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       overflow: hidden;
-      clip: rect(0, 0, 0, 0);
+      text-overflow: ellipsis;
       white-space: nowrap;
-      border: 0;
     }
 
-    @media (max-width: 640px) {
-      .stage {
-        padding: 12px;
-      }
-
-      .dropzone {
-        padding: 24px;
-        border-radius: 22px;
-      }
-
-      .metadata-row {
-        grid-template-columns: 1fr;
-        gap: 4px;
-      }
+    /* Utilities */
+    .hidden { display: none !important; }
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
-        animation-duration: 0ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0ms !important;
-        scroll-behavior: auto !important;
-      }
+    footer {
+      margin-top: 32px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
     }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+    footer a { color: var(--primary); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <main class="stage">
-    <section class="dropzone" id="dropzone" data-active="false" data-state="idle" tabindex="0" aria-live="polite">
-      <div class="shell">
-        <div class="mark" id="mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 16V6"/>
-            <path d="m8.5 9.5 3.5-3.5 3.5 3.5"/>
-            <path d="M5.5 18h13"/>
-          </svg>
-        </div>
 
-        <div>
-          <h1 id="title">Drop image</h1>
-          <p class="subtle" id="subtle">or click anywhere</p>
-        </div>
-
-        <div class="actions" id="actions" hidden>
-          <a class="button" id="downloadButton" download>Download clean image</a>
-        </div>
-
-        <section class="summary" id="summary" hidden>
-          <div class="filename" id="filename"></div>
-          <dl class="metadata" id="metadataList"></dl>
-          <div class="metadata-empty" id="metadataEmpty" hidden>No removable metadata found.</div>
-        </section>
-
-        <label class="sr-only" for="fileInput">Choose an image</label>
-        <input class="sr-only" id="fileInput" type="file" accept="image/*">
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="badge-pill">
+        <span class="dot"></span> 100% Client-Side · Zero Data Upload
       </div>
-    </section>
-  </main>
+      <div class="logo-title">
+        <img src="icon.svg" alt="MetaClean Logo">
+        <span>MetaClean</span>
+      </div>
+      <p>
+        Strip hidden <strong>C2PA AI credentials</strong> ("Made with AI" labels), GPS coordinates, camera serials, and prompts before sharing online.
+      </p>
+    </header>
+
+    <!-- Options Bar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <label for="formatSelect">Output Format:</label>
+        <select id="formatSelect">
+          <option value="auto">Auto (Match Original)</option>
+          <option value="image/png">PNG (Lossless & Clean)</option>
+          <option value="image/webp">WebP (High Efficiency)</option>
+          <option value="image/jpeg">JPEG (Universal)</option>
+        </select>
+      </div>
+      <div class="toolbar-group" id="qualityControl" style="display: none;">
+        <label for="qualityRange">Quality: <span id="qualityVal">95%</span></label>
+        <input type="range" id="qualityRange" min="50" max="100" value="95">
+      </div>
+      <div class="toolbar-group">
+        <span class="kbd-shortcut">Ctrl + V</span> to paste anytime
+      </div>
+    </div>
+
+    <!-- Dropzone Area -->
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop images here or click to browse">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <div>
+        <div class="dropzone-title" id="dropTitle">Drop images here, browse, or paste</div>
+        <div class="dropzone-hint" id="dropHint">Supports JPEG, PNG, WebP · Multiple images supported</div>
+      </div>
+      <div id="dropSpinner" class="spinner hidden"></div>
+      <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+    </div>
+
+    <!-- Batch Queue (if multiple files) -->
+    <div class="batch-queue hidden" id="batchSection">
+      <div class="batch-header">
+        <span id="batchCount">Queue (0 images)</span>
+        <button class="btn btn-primary" id="downloadAllZipBtn" style="padding: 6px 14px; font-size: 13px;">
+          📦 Download All as ZIP
+        </button>
+      </div>
+      <div class="batch-list" id="batchList"></div>
+    </div>
+
+    <!-- Single / Active Image Result Dashboard -->
+    <div class="results-container hidden" id="resultsContainer">
+
+      <!-- AI & Privacy Risk Audit Card -->
+      <div class="audit-card" id="auditCard">
+        <div class="audit-header">
+          <div class="audit-status" id="auditStatus">
+            <span>🛡️ Privacy & Authenticity Audit</span>
+          </div>
+          <span class="audit-badge badge-success" id="auditBadge">Clean</span>
+        </div>
+        <div class="audit-explanation" id="auditExplanation">
+          Scanning image binary markers...
+        </div>
+        <div class="audit-tags-preview" id="auditTagsPreview"></div>
+      </div>
+
+      <!-- Preview & Inspection Split Layout -->
+      <div class="inspect-layout">
+        <div class="preview-box">
+          <div class="image-preview-wrapper">
+            <img id="imagePreview" alt="Sanitized preview">
+          </div>
+          <div class="preview-stats" id="previewStats">Resolution: --</div>
+        </div>
+
+        <div class="actions-panel">
+          <div class="stats-diff-grid">
+            <div class="diff-box">
+              <div class="diff-label">Original File</div>
+              <div class="diff-value" id="origSizeVal">--</div>
+            </div>
+            <div class="diff-box">
+              <div class="diff-label">Cleaned File</div>
+              <div class="diff-value green" id="cleanSizeVal">--</div>
+            </div>
+            <div class="diff-box">
+              <div class="diff-label">Metadata Tags</div>
+              <div class="diff-value" id="tagsCountVal">--</div>
+            </div>
+            <div class="diff-box">
+              <div class="diff-label">Status</div>
+              <div class="diff-value green" id="securityStatusVal">Sanitized</div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <a class="btn btn-primary" id="downloadCleanBtn" download="image-clean.png">
+              ⬇️ Download Clean Image
+            </a>
+            <button class="btn btn-secondary" id="copyClipboardBtn">
+              📋 Copy to Clipboard
+            </button>
+            <button class="btn btn-secondary" id="resetBtn">
+              🔄 Clean Another
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Extracted Tags Detail Tab -->
+      <div class="tabs-section">
+        <div class="tabs-header">
+          <span style="font-size: 13px; font-weight: 700;">Audited Raw Metadata Tags:</span>
+          <span style="font-size: 12px; color: var(--text-muted);" id="tableCountLabel">0 tags found</span>
+        </div>
+        <div style="max-height: 260px; overflow-y: auto;">
+          <table class="metadata-table" id="metadataTable">
+            <thead>
+              <tr>
+                <th>Tag Name</th>
+                <th>Extracted Value (Purged)</th>
+              </tr>
+            </thead>
+            <tbody id="metadataTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <div>Built for privacy · 100% In-Browser · <a href="https://github.com/8aditya8/metaclean" target="_blank" rel="noopener">GitHub Repository</a></div>
+  </footer>
 
   <script type="module">
     import { stripImageMetadata } from "./metaclean.js";
 
-    const elements = {
-      dropzone: document.getElementById("dropzone"),
-      mark: document.getElementById("mark"),
-      title: document.getElementById("title"),
-      subtle: document.getElementById("subtle"),
-      summary: document.getElementById("summary"),
-      filename: document.getElementById("filename"),
-      metadataList: document.getElementById("metadataList"),
-      metadataEmpty: document.getElementById("metadataEmpty"),
-      actions: document.getElementById("actions"),
-      downloadButton: document.getElementById("downloadButton"),
-      fileInput: document.getElementById("fileInput"),
-    };
-
-    const state = {
-      downloadUrl: null,
-      runId: 0,
-      mode: "idle",
-    };
-
+    // Decoders
     const utf8Decoder = new TextDecoder("utf-8");
     const latin1Decoder = new TextDecoder("latin1");
     const utf16Decoder = new TextDecoder("utf-16le");
+
     const labelOrder = [
-      "Title",
-      "Headline",
-      "Description",
-      "Subject",
-      "Keywords",
-      "Camera",
-      "Camera Make",
-      "Camera Model",
-      "Captured",
-      "Modified",
-      "GPS",
-      "Lens",
-      "Focal Length",
-      "ISO",
-      "Exposure",
-      "Aperture",
-      "Flash",
-      "White Balance",
-      "Metering",
-      "Color Space",
-      "Software",
-      "Artist",
-      "Byline",
-      "Byline Title",
-      "Credit",
-      "Source",
-      "Instructions",
-      "Copyright",
-      "Comment",
-      "Orientation",
-      "Resolution",
-      "Profile",
-      "Other metadata",
+      "Title", "Headline", "Description", "Subject", "Keywords", "Camera",
+      "Camera Make", "Camera Model", "Captured", "Modified", "GPS", "Lens",
+      "Focal Length", "ISO", "Exposure", "Aperture", "Flash", "White Balance",
+      "Metering", "Color Space", "Software", "Artist", "Byline", "Byline Title",
+      "Credit", "Source", "Instructions", "Copyright", "Comment", "Orientation",
+      "Resolution", "Profile", "Other metadata",
     ];
-    const pngIgnoredAncillaryChunks = new Set([
-      "acTL",
-      "fcTL",
-      "fdAT",
-      "bKGD",
-      "cHRM",
-      "gAMA",
-      "hIST",
-      "oFFs",
-      "sBIT",
-      "sCAL",
-      "sPLT",
-      "sRGB",
-      "sTER",
-    ]);
-    const webpIgnoredChunks = new Set([
-      "ALPH",
-      "ANIM",
-      "ANMF",
-      "VP8 ",
-      "VP8L",
-      "VP8X",
-    ]);
+
+    const pngIgnoredAncillaryChunks = new Set(["acTL","fcTL","fdAT","bKGD","cHRM","gAMA","hIST","oFFs","sBIT","sCAL","sPLT","sRGB","sTER"]);
+    const webpIgnoredChunks = new Set(["ALPH","ANIM","ANMF","VP8 ","VP8L","VP8X"]);
     const xmpLabelAliases = {
-      title: "Title",
-      description: "Description",
-      creator: "Artist",
-      creatortool: "Software",
-      createdate: "Captured",
-      datetimeoriginal: "Captured",
-      datecreated: "Captured",
-      modifydate: "Modified",
-      metadatadate: "Modified",
-      rights: "Copyright",
-      rightsstatement: "Copyright",
-      copyright: "Copyright",
-      subject: "Keywords",
-      headline: "Headline",
-      instructions: "Instructions",
-      credit: "Credit",
-      source: "Source",
-      creatorjobtitle: "Byline Title",
-      authorsposition: "Byline Title",
-      byline: "Byline",
-      personinimage: "Subject",
-      personinimagewdetails: "Subject",
-      webstatement: "Source",
-      digitalsourcefiletype: "Source",
-      city: "City",
-      state: "State",
-      country: "Country",
-      location: "Location",
-      rightsusageterms: "Copyright",
-      usageterms: "Copyright",
-      dcformat: "Format",
-      identifier: "Identifier",
-      label: "Label",
-      rating: "Rating",
+      title: "Title", description: "Description", creator: "Artist", creatortool: "Software",
+      createdate: "Captured", datetimeoriginal: "Captured", datecreated: "Captured", modifydate: "Modified",
+      metadatadate: "Modified", rights: "Copyright", rightsstatement: "Copyright", copyright: "Copyright",
+      subject: "Keywords", headline: "Headline", instructions: "Instructions", credit: "Credit", source: "Source",
+      creatorjobtitle: "Byline Title", authorsposition: "Byline Title", byline: "Byline", personinimage: "Subject",
+      webstatement: "Source", digitalsourcefiletype: "Source", city: "City", state: "State", country: "Country",
+      location: "Location", rightsusageterms: "Copyright", usageterms: "Copyright", dcformat: "Format",
+      identifier: "Identifier", label: "Label", rating: "Rating"
     };
+
     const iptcDatasetDefinitions = {
-      "2:5": "Title",
-      "2:10": "Urgency",
-      "2:15": "Category",
-      "2:20": "Supplemental Category",
-      "2:25": "Keywords",
-      "2:40": "Instructions",
-      "2:55": "Captured",
-      "2:60": "Captured",
-      "2:80": "Byline",
-      "2:85": "Byline Title",
-      "2:90": "City",
-      "2:95": "State",
-      "2:100": "Country Code",
-      "2:101": "Country",
-      "2:103": "Job Identifier",
-      "2:105": "Headline",
-      "2:110": "Credit",
-      "2:115": "Source",
-      "2:116": "Copyright",
-      "2:118": "Contact",
-      "2:120": "Description",
-      "2:122": "Writer",
+      "2:5": "Title", "2:10": "Urgency", "2:15": "Category", "2:20": "Supplemental Category",
+      "2:25": "Keywords", "2:40": "Instructions", "2:55": "Captured", "2:60": "Captured",
+      "2:80": "Byline", "2:85": "Byline Title", "2:90": "City", "2:95": "State",
+      "2:100": "Country Code", "2:101": "Country", "2:103": "Job Identifier", "2:105": "Headline",
+      "2:110": "Credit", "2:115": "Source", "2:116": "Copyright", "2:118": "Contact",
+      "2:120": "Description", "2:122": "Writer"
     };
+
     const exifTagDefinitions = {
-      0x010D: { label: "Document" },
-      0x010E: { label: "Description" },
-      0x010F: { label: "Camera Make" },
-      0x0110: { label: "Camera Model" },
-      0x0112: { label: "Orientation", format: formatOrientation },
-      0x011A: { label: "X Resolution", format: formatNumber },
-      0x011B: { label: "Y Resolution", format: formatNumber },
-      0x0128: { label: "Resolution Unit", format: (value) => ({ 2: "Inch", 3: "Centimeter" }[firstValue(value)] || String(firstValue(value))) },
-      0x0131: { label: "Software" },
-      0x0132: { label: "Modified", format: formatExifDate },
-      0x013B: { label: "Artist" },
-      0x013C: { label: "Host Computer" },
-      0x8298: { label: "Copyright" },
-      0x829A: { label: "Exposure", format: formatExposure },
-      0x829D: { label: "Aperture", format: formatAperture },
-      0x8822: { label: "Exposure Program", format: formatEnum({
-        0: "Not defined",
-        1: "Manual",
-        2: "Program",
-        3: "Aperture priority",
-        4: "Shutter priority",
-        5: "Creative",
-        6: "Action",
-        7: "Portrait",
-        8: "Landscape",
-      }) },
-      0x8827: { label: "ISO", format: (value) => String(firstValue(value)) },
-      0x9000: { label: "EXIF Version", format: formatAsciiBytes },
-      0x9003: { label: "Captured", format: formatExifDate },
-      0x9004: { label: "Created", format: formatExifDate },
-      0x9010: { label: "Offset Time", format: cleanText },
-      0x9011: { label: "Offset Time Original", format: cleanText },
-      0x9012: { label: "Offset Time Digitized", format: cleanText },
-      0x9201: { label: "Shutter Speed", format: (value) => formatNumber(value, 2) },
-      0x9202: { label: "Aperture", format: formatAperture },
-      0x9203: { label: "Brightness", format: (value) => formatNumber(value, 2) },
-      0x9204: { label: "Exposure Bias", format: (value) => formatNumber(value, 2) },
-      0x9207: { label: "Metering", format: formatEnum({
-        0: "Unknown",
-        1: "Average",
-        2: "Center weighted",
-        3: "Spot",
-        4: "Multi spot",
-        5: "Pattern",
-        6: "Partial",
-      }) },
-      0x9208: { label: "Light Source", format: (value) => String(firstValue(value)) },
-      0x9209: { label: "Flash", format: formatFlash },
-      0x920A: { label: "Focal Length", format: (value) => `${formatNumber(value, 1).replace(/\.0$/, "")}mm` },
-      0x927C: { label: "Maker Notes", format: formatPresence },
-      0x9286: { label: "Comment", format: formatExifUserComment },
-      0xA001: { label: "Color Space", format: formatEnum({
-        1: "sRGB",
-        0xFFFF: "Uncalibrated",
-      }) },
-      0xA002: { label: "Width", format: (value) => `${firstValue(value)} px` },
-      0xA003: { label: "Height", format: (value) => `${firstValue(value)} px` },
-      0xA20E: { label: "Focal Plane X Resolution", format: formatNumber },
-      0xA20F: { label: "Focal Plane Y Resolution", format: formatNumber },
-      0xA210: { label: "Focal Plane Resolution Unit", format: (value) => String(firstValue(value)) },
-      0xA217: { label: "Sensing Method", format: (value) => String(firstValue(value)) },
-      0xA300: { label: "File Source", format: formatAsciiBytes },
-      0xA301: { label: "Scene Type", format: formatAsciiBytes },
-      0xA402: { label: "Exposure Mode", format: formatEnum({ 0: "Auto", 1: "Manual", 2: "Auto bracket" }) },
-      0xA403: { label: "White Balance", format: formatEnum({ 0: "Auto", 1: "Manual" }) },
-      0xA404: { label: "Digital Zoom", format: formatNumber },
-      0xA405: { label: "Focal Length 35mm", format: (value) => `${firstValue(value)}mm` },
-      0xA406: { label: "Scene Capture", format: formatEnum({ 0: "Standard", 1: "Landscape", 2: "Portrait", 3: "Night" }) },
-      0xA420: { label: "Image Unique ID" },
-      0xA430: { label: "Owner" },
-      0xA431: { label: "Camera Serial" },
-      0xA432: { label: "Lens Info", format: formatArrayNumbers },
-      0xA433: { label: "Lens Make" },
-      0xA434: { label: "Lens" },
-      0xA435: { label: "Lens Serial" },
-      0x9C9B: { label: "Title", format: formatUtf16Bytes },
-      0x9C9C: { label: "Comment", format: formatUtf16Bytes },
-      0x9C9D: { label: "Artist", format: formatUtf16Bytes },
-      0x9C9E: { label: "Keywords", format: formatUtf16Bytes },
-      0x9C9F: { label: "Subject", format: formatUtf16Bytes },
+      0x010D: { label: "Document" }, 0x010E: { label: "Description" }, 0x010F: { label: "Camera Make" },
+      0x0110: { label: "Camera Model" }, 0x0112: { label: "Orientation" }, 0x0131: { label: "Software" },
+      0x0132: { label: "Modified" }, 0x013B: { label: "Artist" }, 0x013C: { label: "Host Computer" },
+      0x8298: { label: "Copyright" }, 0x829A: { label: "Exposure" }, 0x829D: { label: "Aperture" },
+      0x8827: { label: "ISO" }, 0x9003: { label: "Captured" }, 0x9004: { label: "Created" },
+      0x920A: { label: "Focal Length" }, 0x927C: { label: "Maker Notes" }, 0x9286: { label: "Comment" },
+      0xA430: { label: "Owner" }, 0xA431: { label: "Camera Serial" }, 0xA434: { label: "Lens" },
+      0xA435: { label: "Lens Serial" }, 0x9C9B: { label: "Title" }, 0x9C9C: { label: "Comment" },
+      0x9C9D: { label: "Artist" }, 0x9C9E: { label: "Keywords" }
     };
+
     const gpsTagDefinitions = {
-      0x0000: { label: "GPS Version", format: formatGpsVersion },
-      0x0001: { label: "Latitude Ref" },
-      0x0002: { label: "Latitude", format: formatGpsCoordinate },
-      0x0003: { label: "Longitude Ref" },
-      0x0004: { label: "Longitude", format: formatGpsCoordinate },
-      0x0005: { label: "Altitude Ref", format: (value) => (firstValue(value) ? "Below sea level" : "Above sea level") },
-      0x0006: { label: "Altitude", format: (value) => `${formatNumber(value, 2)} m` },
-      0x0007: { label: "GPS Time", format: formatGpsTime },
-      0x0012: { label: "Map Datum" },
-      0x001D: { label: "GPS Date", format: cleanText },
+      0x0001: { label: "Latitude Ref" }, 0x0002: { label: "Latitude" },
+      0x0003: { label: "Longitude Ref" }, 0x0004: { label: "Longitude" },
+      0x0006: { label: "Altitude" }, 0x0007: { label: "GPS Time" }
     };
-
-    function cleanText(value) {
-      return String(value || "").replace(/\s+/g, " ").trim();
-    }
-
-    function shorten(value, max = 120) {
-      const text = cleanText(value);
-      if (text.length <= max) {
-        return text;
-      }
-      return `${text.slice(0, max - 1).trimEnd()}…`;
-    }
-
-    function addField(bucket, label, value) {
-      const normalized = shorten(value);
-      if (!label || !normalized) {
-        return;
-      }
-
-      if (!bucket.has(label)) {
-        bucket.set(label, new Set());
-      }
-
-      bucket.get(label).add(normalized);
-    }
-
-    function bucketValueCount(bucket) {
-      let count = 0;
-      for (const values of bucket.values()) {
-        count += values.size;
-      }
-      return count;
-    }
-
-    function addPresenceFallback(bucket, beforeCount, label, value = "Present") {
-      if (bucketValueCount(bucket) === beforeCount) {
-        addField(bucket, label, value);
-      }
-    }
-
-    function addOtherMetadata(bucket, value) {
-      addField(bucket, "Other metadata", value);
-    }
-
-    function isPngAncillaryChunk(type) {
-      return typeof type === "string" && type.length === 4 && (type.charCodeAt(0) & 32) === 32;
-    }
-
-    function extractPrintableStrings(bytes, minimum = 4) {
-      const strings = [];
-      let start = -1;
-
-      for (let index = 0; index <= bytes.length; index += 1) {
-        const byte = index < bytes.length ? bytes[index] : 0;
-        const printable = byte >= 32 && byte <= 126;
-
-        if (printable) {
-          if (start === -1) {
-            start = index;
-          }
-          continue;
-        }
-
-        if (start !== -1 && index - start >= minimum) {
-          strings.push(latin1Decoder.decode(bytes.subarray(start, index)));
-        }
-        start = -1;
-      }
-
-      return strings;
-    }
 
     function readAscii(bytes, start, length) {
+      let r = "";
       const end = Math.min(bytes.length, start + length);
-      let result = "";
-      for (let index = start; index < end; index += 1) {
-        result += String.fromCharCode(bytes[index]);
-      }
-      return result;
+      for (let i = start; i < end; i++) r += String.fromCharCode(bytes[i]);
+      return r;
     }
-
-    function humanizeKeyword(keyword) {
-      return cleanText(keyword)
-        .replace(/[_-]+/g, " ")
-        .replace(/\b\w/g, (match) => match.toUpperCase());
+    function cleanText(v) { return String(v || "").replace(/\s+/g, " ").trim(); }
+    function addField(bucket, label, val) {
+      const text = cleanText(val);
+      if (!label || !text) return;
+      if (!bucket.has(label)) bucket.set(label, new Set());
+      bucket.get(label).add(text);
     }
-
-    function normalizeFieldLabel(label) {
-      return cleanText(label);
-    }
-
-    function firstValue(value) {
-      return Array.isArray(value) ? value[0] : value;
-    }
-
-    function formatNumber(value, digits = 2) {
-      const number = Number(firstValue(value));
-      if (!Number.isFinite(number)) {
-        return "";
-      }
-      return number.toFixed(digits).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
-    }
-
-    function formatArrayNumbers(value) {
-      if (!Array.isArray(value)) {
-        return formatNumber(value);
-      }
-      return value
-        .map((item) => formatNumber(item, 2))
-        .filter(Boolean)
-        .join(", ");
-    }
-
-    function formatPresence(value) {
-      if (value instanceof Uint8Array) {
-        return value.length ? `${value.length} bytes` : "";
-      }
-      return cleanText(value) ? "Present" : "";
-    }
-
-    function formatAsciiBytes(value) {
-      if (!(value instanceof Uint8Array)) {
-        return cleanText(value);
-      }
-      return cleanText(latin1Decoder.decode(value).replace(/\0+$/g, ""));
-    }
-
-    function formatUtf16Bytes(value) {
-      if (!(value instanceof Uint8Array)) {
-        return cleanText(value);
-      }
-      return cleanText(utf16Decoder.decode(value).replace(/\0+$/g, ""));
-    }
-
-    function formatExifUserComment(value) {
-      if (!(value instanceof Uint8Array)) {
-        return cleanText(value);
-      }
-
-      if (value.length >= 8) {
-        const prefix = readAscii(value, 0, 8);
-        const body = value.subarray(8);
-        if (prefix.startsWith("ASCII")) {
-          return cleanText(latin1Decoder.decode(body).replace(/\0+$/g, ""));
-        }
-        if (prefix.startsWith("UNICODE")) {
-          return cleanText(utf16Decoder.decode(body).replace(/\0+$/g, ""));
-        }
-      }
-
-      return formatAsciiBytes(value);
-    }
-
-    function formatExposure(value) {
-      const number = Number(firstValue(value));
-      if (!Number.isFinite(number) || number <= 0) {
-        return "";
-      }
-      if (number >= 1) {
-        return `${formatNumber(number, 2)} s`;
-      }
-      const denominator = Math.round(1 / number);
-      if (denominator > 1) {
-        return `1/${denominator} s`;
-      }
-      return `${formatNumber(number, 3)} s`;
-    }
-
-    function formatAperture(value) {
-      const number = Number(firstValue(value));
-      if (!Number.isFinite(number) || number <= 0) {
-        return "";
-      }
-      return `f/${formatNumber(number, 1)}`;
-    }
-
-    function formatEnum(map) {
-      return (value) => {
-        const key = Number(firstValue(value));
-        return map[key] || (Number.isFinite(key) ? String(key) : "");
-      };
-    }
-
-    function formatFlash(value) {
-      const number = Number(firstValue(value));
-      if (!Number.isFinite(number)) {
-        return "";
-      }
-      return number & 1 ? "Fired" : "Did not fire";
-    }
-
-    function formatGpsVersion(value) {
-      if (!Array.isArray(value)) {
-        return "";
-      }
-      return value.join(".");
-    }
-
-    function formatGpsCoordinate(value) {
-      if (!Array.isArray(value) || value.length < 3) {
-        return "";
-      }
-      return value.map((part) => formatNumber(part, 5)).filter(Boolean).join(", ");
-    }
-
-    function formatGpsTime(value) {
-      if (!Array.isArray(value) || value.length < 3) {
-        return "";
-      }
-      return value
-        .slice(0, 3)
-        .map((part) => formatNumber(part, 0).padStart(2, "0"))
-        .join(":");
-    }
-
-    async function inflateBytes(bytes) {
-      if (typeof DecompressionStream !== "function") {
-        return null;
-      }
-
-      try {
-        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate"));
-        return new Uint8Array(await new Response(stream).arrayBuffer());
-      } catch (error) {
-        return null;
-      }
-    }
-
-    function formatExifDate(value) {
-      const text = cleanText(value);
-      if (!text) {
-        return "";
-      }
-      return text.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
-    }
-
-    function formatOrientation(value) {
-      const map = {
-        1: "Normal",
-        2: "Mirrored",
-        3: "Upside down",
-        4: "Upside down mirrored",
-        5: "Rotated left mirrored",
-        6: "Rotated right",
-        7: "Rotated right mirrored",
-        8: "Rotated left",
-      };
-      return map[value] || String(value);
-    }
-
-    function dmsToDecimal(values, ref) {
-      if (!Array.isArray(values) || values.length < 3) {
-        return "";
-      }
-
-      const [degrees, minutes, seconds] = values;
-      if (![degrees, minutes, seconds].every((part) => Number.isFinite(part))) {
-        return "";
-      }
-
-      let decimal = degrees + (minutes / 60) + (seconds / 3600);
-      if (ref === "S" || ref === "W") {
-        decimal *= -1;
-      }
-      return decimal.toFixed(5);
-    }
-
-    function getXmpLabel(localName) {
-      const key = cleanText(localName).toLowerCase();
-      return xmpLabelAliases[key] || humanizeKeyword(localName);
-    }
-
-    function collectXmpValue(bucket, label, value) {
-      const normalizedLabel = normalizeFieldLabel(label);
-      const text = cleanText(value);
-      if (!normalizedLabel || !text) {
-        return;
-      }
-
-      if (normalizedLabel === "Captured" || normalizedLabel === "Modified" || normalizedLabel === "Created") {
-        addField(bucket, normalizedLabel, formatExifDate(text));
-        return;
-      }
-
-      addField(bucket, normalizedLabel, text);
-    }
-
-    function parseXmpMetadata(text, bucket) {
-      const xml = cleanText(text);
-      if (!xml) {
-        return;
-      }
-
-      try {
-        const doc = new DOMParser().parseFromString(xml, "application/xml");
-        if (doc.querySelector("parsererror")) {
-          return;
-        }
-
-        const structural = new Set(["rdf", "description", "bag", "seq", "alt", "li"]);
-        const ignoredAttributes = new Set(["about", "parseType", "resource", "nodeID", "lang"]);
-
-        function walk(node, inheritedLabel = "") {
-          if (!(node instanceof Element)) {
-            return;
-          }
-
-          const localName = node.localName || "";
-          const nextLabel = structural.has(localName.toLowerCase()) ? inheritedLabel : getXmpLabel(localName);
-
-          for (const attribute of Array.from(node.attributes)) {
-            if (attribute.name.startsWith("xmlns")) {
-              continue;
-            }
-            if (ignoredAttributes.has(attribute.localName)) {
-              continue;
-            }
-            const attributeLabel = getXmpLabel(attribute.localName);
-            collectXmpValue(bucket, attributeLabel, attribute.value);
-          }
-
-          const elementChildren = Array.from(node.children);
-          const directText = cleanText(Array.from(node.childNodes)
-            .filter((child) => child.nodeType === Node.TEXT_NODE || child.nodeType === Node.CDATA_SECTION_NODE)
-            .map((child) => child.textContent)
-            .join(" "));
-
-          if (directText && nextLabel) {
-            collectXmpValue(bucket, nextLabel, directText);
-          }
-
-          if (!elementChildren.length && !directText) {
-            const fallback = cleanText(node.textContent);
-            if (fallback && nextLabel) {
-              collectXmpValue(bucket, nextLabel, fallback);
-            }
-          }
-
-          for (const child of elementChildren) {
-            walk(child, nextLabel || inheritedLabel);
-          }
-        }
-
-        walk(doc.documentElement);
-      } catch (error) {
-      }
-    }
-
-    function getExifTagDefinition(tag, kind) {
-      if (kind === "gps") {
-        return gpsTagDefinitions[tag] || null;
-      }
-      return exifTagDefinitions[tag] || null;
-    }
-
-    function formatUnknownExifValue(value) {
-      if (typeof value === "string") {
-        return cleanText(value);
-      }
-      if (typeof value === "number") {
-        return formatNumber(value, 3);
-      }
-      if (Array.isArray(value) && value.length && value.length <= 8) {
-        return value.map((item) => formatNumber(item, 3)).filter(Boolean).join(", ");
-      }
-      return "";
+    function bucketValueCount(b) {
+      let c = 0; for (const v of b.values()) c += v.size; return c;
     }
 
     function parseExifPayload(bytes, bucket) {
       let offset = 0;
-      if (readAscii(bytes, 0, 6) === "Exif\0\0") {
-        offset = 6;
-      }
-
-      if (bytes.length - offset < 8) {
-        return;
-      }
-
-      const view = new DataView(bytes.buffer, bytes.byteOffset + offset, bytes.byteLength - offset);
+      if (readAscii(bytes, 0, 6) === "Exif\0\0") offset = 6;
+      if (bytes.length - offset < 8) return;
       const order = readAscii(bytes.subarray(offset, offset + 2), 0, 2);
-      if (order !== "II" && order !== "MM") {
-        return;
-      }
-
+      if (order !== "II" && order !== "MM") return;
+      const view = new DataView(bytes.buffer, bytes.byteOffset + offset, bytes.byteLength - offset);
       const little = order === "II";
-      const typeSizes = {
-        1: 1,
-        2: 1,
-        3: 2,
-        4: 4,
-        5: 8,
-        7: 1,
-        9: 4,
-        10: 8,
-      };
+      const getUint16 = (p) => view.getUint16(p, little);
+      const getUint32 = (p) => view.getUint32(p, little);
 
-      const getUint16 = (position) => view.getUint16(position, little);
-      const getUint32 = (position) => view.getUint32(position, little);
-      const getInt32 = (position) => view.getInt32(position, little);
-
-      if (getUint16(2) !== 42) {
-        return;
-      }
-
-      const context = {};
+      if (getUint16(2) !== 42) return;
       const visited = new Set();
-
-      function readValue(type, count, valueOffset) {
-        const typeSize = typeSizes[type];
-        if (!typeSize || !count) {
-          return null;
-        }
-
-        const totalSize = typeSize * count;
-        let dataOffset = valueOffset;
-
-        if (totalSize > 4) {
-          dataOffset = getUint32(valueOffset);
-        }
-
-        if (dataOffset < 0 || dataOffset + totalSize > view.byteLength) {
-          return null;
-        }
-
-        const readRational = (position, signed) => {
-          const numerator = signed ? getInt32(position) : getUint32(position);
-          const denominator = signed ? getInt32(position + 4) : getUint32(position + 4);
-          if (!denominator) {
-            return null;
-          }
-          return numerator / denominator;
-        };
-
-        if (type === 1 || type === 7) {
-          return new Uint8Array(view.buffer, view.byteOffset + dataOffset, count);
-        }
-
-        if (type === 2) {
-          return cleanText(latin1Decoder.decode(new Uint8Array(view.buffer, view.byteOffset + dataOffset, count)).replace(/\0+$/g, ""));
-        }
-
-        if (type === 3) {
-          if (count === 1) {
-            return getUint16(dataOffset);
-          }
-          return Array.from({ length: count }, (_, index) => getUint16(dataOffset + (index * 2)));
-        }
-
-        if (type === 4) {
-          if (count === 1) {
-            return getUint32(dataOffset);
-          }
-          return Array.from({ length: count }, (_, index) => getUint32(dataOffset + (index * 4)));
-        }
-
-        if (type === 5) {
-          if (count === 1) {
-            return readRational(dataOffset, false);
-          }
-          return Array.from({ length: count }, (_, index) => readRational(dataOffset + (index * 8), false));
-        }
-
-        if (type === 9) {
-          if (count === 1) {
-            return getInt32(dataOffset);
-          }
-          return Array.from({ length: count }, (_, index) => getInt32(dataOffset + (index * 4)));
-        }
-
-        if (type === 10) {
-          if (count === 1) {
-            return readRational(dataOffset, true);
-          }
-          return Array.from({ length: count }, (_, index) => readRational(dataOffset + (index * 8), true));
-        }
-
-        return null;
-      }
-
-      function parseIfd(position, kind) {
-        if (!Number.isFinite(position) || position < 0 || position + 2 > view.byteLength) {
-          return;
-        }
-
-        const visitKey = `${kind}:${position}`;
-        if (visited.has(visitKey)) {
-          return;
-        }
-        visited.add(visitKey);
-
-        const count = getUint16(position);
-        for (let index = 0; index < count; index += 1) {
-          const entry = position + 2 + (index * 12);
-          if (entry + 12 > view.byteLength) {
-            break;
-          }
-
+      function parseIfd(pos, kind) {
+        if (!pos || pos + 2 > view.byteLength || visited.has(pos)) return;
+        visited.add(pos);
+        const count = getUint16(pos);
+        for (let i = 0; i < count; i++) {
+          const entry = pos + 2 + (i * 12);
+          if (entry + 12 > view.byteLength) break;
           const tag = getUint16(entry);
-          const type = getUint16(entry + 2);
-          const entryCount = getUint32(entry + 4);
-          const value = readValue(type, entryCount, entry + 8);
-
-          if (tag === 0x8769) {
-            context.exifIfd = value;
-            continue;
-          }
-
-          if (tag === 0x8825) {
-            context.gpsIfd = value;
-            continue;
-          }
-
-          if (tag === 0xA005) {
-            context.interopIfd = value;
-            continue;
-          }
-
-          if (kind === "gps") {
-            if (tag === 0x0001) context.latRef = value;
-            if (tag === 0x0002) context.lat = value;
-            if (tag === 0x0003) context.lngRef = value;
-            if (tag === 0x0004) context.lng = value;
-          }
-
-          const definition = getExifTagDefinition(tag, kind);
-          if (definition) {
-            const formatted = definition.format ? definition.format(value) : cleanText(value);
-            addField(bucket, definition.label, formatted);
-            continue;
-          }
-
-          const fallback = formatUnknownExifValue(value);
-          if (fallback) {
-            addField(bucket, `EXIF 0x${tag.toString(16).toUpperCase().padStart(4, "0")}`, fallback);
-          }
-        }
-
-        const nextIfdPointerPosition = position + 2 + (count * 12);
-        if (kind === "ifd0" && nextIfdPointerPosition + 4 <= view.byteLength) {
-          const nextIfd = getUint32(nextIfdPointerPosition);
-          if (nextIfd) {
-            parseIfd(nextIfd, "ifd1");
+          const def = (kind === "gps" ? gpsTagDefinitions : exifTagDefinitions)[tag];
+          if (def) {
+            addField(bucket, def.label, "Present");
           }
         }
       }
-
       parseIfd(getUint32(4), "ifd0");
+    }
 
-      if (Number.isFinite(context.exifIfd)) {
-        parseIfd(context.exifIfd, "exif");
+    function parseCaBXMetadata(bytes, bucket) {
+      let str = "";
+      for (let i = 0; i < bytes.length; i++) {
+        const b = bytes[i];
+        if (b >= 32 && b <= 126) str += String.fromCharCode(b);
+        else str += " ";
       }
+      addField(bucket, "C2PA Provenance", "Present (Authenticity Manifest)");
+      const manifestId = str.match(/urn:c2pa:[0-9a-f-]{16,}/i);
+      if (manifestId) addField(bucket, "C2PA Manifest", manifestId[0]);
+      const gen = str.match(/OpenAI Media Service API|OpenAI [^\n]{0,80}Service/i);
+      if (gen) addField(bucket, "AI Generator", gen[0]);
+      if (/c2pa\.claim/i.test(str)) addField(bucket, "C2PA Claim", "Cryptographic Claim Embedded");
+      if (/c2pa\.signature/i.test(str)) addField(bucket, "C2PA Signature", "Cryptographic Signature Embedded");
+    }
 
-      if (Number.isFinite(context.gpsIfd)) {
-        parseIfd(context.gpsIfd, "gps");
+    function parseXmpMetadata(text, bucket) {
+      if (!text) return;
+      const t = text.toLowerCase();
+      if (t.includes("c2pa")) addField(bucket, "C2PA", "XMP C2PA Tracking Found");
+      if (t.includes("prompt") || t.includes("parameters")) addField(bucket, "AI Parameters", "Generation Prompt / Parameters Found");
+      if (t.includes("midjourney") || t.includes("dall-e") || t.includes("stable diffusion")) {
+        addField(bucket, "AI Model Signature", "Generative Model Marker Found");
       }
-
-      if (Number.isFinite(context.interopIfd)) {
-        parseIfd(context.interopIfd, "interop");
-      }
-
-      const camera = [cleanText(context.make), cleanText(context.model)]
-        .filter(Boolean)
-        .filter((value, index, array) => array.indexOf(value) === index)
-        .join(" ");
-      addField(bucket, "Camera", camera);
-
-      const lat = dmsToDecimal(context.lat, context.latRef);
-      const lng = dmsToDecimal(context.lng, context.lngRef);
-      if (lat && lng) {
-        addField(bucket, "GPS", `${lat}, ${lng}`);
+      for (const [k, v] of Object.entries(xmpLabelAliases)) {
+        if (t.includes(k)) addField(bucket, v, "Present in XMP");
       }
     }
 
     async function parsePngMetadata(bytes, bucket) {
-      if (readAscii(bytes, 0, 8) !== "\x89PNG\r\n\x1a\n") {
-        return;
-      }
-
       const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
       let offset = 8;
-
       while (offset + 8 <= bytes.length) {
         const length = view.getUint32(offset, false);
         const type = readAscii(bytes, offset + 4, 4);
-        const dataStart = offset + 8;
-        const dataEnd = dataStart + length;
-
-        if (dataEnd + 4 > bytes.length) {
-          break;
-        }
-
-        const chunk = bytes.subarray(dataStart, dataEnd);
-
-        if (type === "eXIf") {
-          const beforeCount = bucketValueCount(bucket);
-          parseExifPayload(chunk, bucket);
-          addPresenceFallback(bucket, beforeCount, "EXIF");
-        } else if (type === "caBX") {
-          parseCaBXMetadata(chunk, bucket);
-        } else if (type === "iCCP") {
-          addField(bucket, "Profile", "ICC profile");
-        } else if (type === "tEXt") {
-          const separator = chunk.indexOf(0);
-          if (separator > -1) {
-            const keyword = latin1Decoder.decode(chunk.subarray(0, separator));
-            const value = latin1Decoder.decode(chunk.subarray(separator + 1));
-            if (cleanText(keyword).toLowerCase() === "xml:com.adobe.xmp") {
-              const beforeCount = bucketValueCount(bucket);
-              parseXmpMetadata(value, bucket);
-              addPresenceFallback(bucket, beforeCount, "XMP");
-            } else {
-              mapTextMetadata(keyword, value, bucket);
-            }
+        const chunk = bytes.subarray(offset + 8, offset + 8 + length);
+        if (type === "eXIf") parseExifPayload(chunk, bucket);
+        else if (type === "caBX") parseCaBXMetadata(chunk, bucket);
+        else if (type === "tEXt" || type === "iTXt" || type === "zTXt") {
+          const str = latin1Decoder.decode(chunk);
+          if (str.toLowerCase().includes("parameters") || str.toLowerCase().includes("prompt")) {
+            addField(bucket, "Generation Prompt", "Embedded AI Prompt Parameters");
+          } else {
+            addField(bucket, `PNG ${type}`, "Text metadata record");
           }
-        } else if (type === "zTXt") {
-          const separator = chunk.indexOf(0);
-          if (separator > -1 && separator + 2 <= chunk.length) {
-            const keyword = latin1Decoder.decode(chunk.subarray(0, separator));
-            const inflated = await inflateBytes(chunk.subarray(separator + 2));
-            const value = inflated ? latin1Decoder.decode(inflated) : "";
-            if (cleanText(keyword).toLowerCase() === "xml:com.adobe.xmp") {
-              const beforeCount = bucketValueCount(bucket);
-              parseXmpMetadata(value, bucket);
-              addPresenceFallback(bucket, beforeCount, "XMP");
-            } else {
-              mapTextMetadata(keyword, value, bucket);
-            }
-          }
-        } else if (type === "iTXt") {
-          const first = chunk.indexOf(0);
-          if (first > -1 && first + 5 <= chunk.length) {
-            const keyword = utf8Decoder.decode(chunk.subarray(0, first));
-            const compressionFlag = chunk[first + 1];
-            let cursor = first + 3;
-            while (cursor < chunk.length && chunk[cursor] !== 0) {
-              cursor += 1;
-            }
-            cursor += 1;
-            while (cursor < chunk.length && chunk[cursor] !== 0) {
-              cursor += 1;
-            }
-            cursor += 1;
-            let text = "";
-            if (compressionFlag === 0) {
-              text = utf8Decoder.decode(chunk.subarray(cursor));
-            } else {
-              const inflated = await inflateBytes(chunk.subarray(cursor));
-              text = inflated ? utf8Decoder.decode(inflated) : "";
-            }
-            if (cleanText(keyword).toLowerCase() === "xml:com.adobe.xmp") {
-              const beforeCount = bucketValueCount(bucket);
-              parseXmpMetadata(text, bucket);
-              addPresenceFallback(bucket, beforeCount, "XMP");
-            } else {
-              mapTextMetadata(keyword, text, bucket);
-            }
-          }
-        } else if (type === "tIME" && chunk.length === 7) {
-          const year = (chunk[0] << 8) + chunk[1];
-          const month = String(chunk[2]).padStart(2, "0");
-          const day = String(chunk[3]).padStart(2, "0");
-          const hour = String(chunk[4]).padStart(2, "0");
-          const minute = String(chunk[5]).padStart(2, "0");
-          const second = String(chunk[6]).padStart(2, "0");
-          addField(bucket, "Modified", `${year}-${month}-${day} ${hour}:${minute}:${second} UTC`);
-        } else if (type === "pHYs" && chunk.length >= 9) {
-          const x = view.getUint32(dataStart, false);
-          const y = view.getUint32(dataStart + 4, false);
-          const unit = chunk[8] === 1 ? "pixels per meter" : "unitless";
-          addField(bucket, "Resolution", `${x} × ${y} ${unit}`);
-        } else if (isPngAncillaryChunk(type) && !pngIgnoredAncillaryChunks.has(type)) {
-          addOtherMetadata(bucket, `PNG ${type}`);
         }
-
-        offset = dataEnd + 4;
-      }
-    }
-
-    function parseWebpMetadata(bytes, bucket) {
-      if (readAscii(bytes, 0, 4) !== "RIFF" || readAscii(bytes, 8, 4) !== "WEBP") {
-        return;
-      }
-
-      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-      let offset = 12;
-
-      while (offset + 8 <= bytes.length) {
-        const type = readAscii(bytes, offset, 4);
-        const length = view.getUint32(offset + 4, true);
-        const dataStart = offset + 8;
-        const dataEnd = dataStart + length;
-
-        if (dataEnd > bytes.length) {
-          break;
-        }
-
-        const chunk = bytes.subarray(dataStart, dataEnd);
-
-        if (type === "EXIF") {
-          const beforeCount = bucketValueCount(bucket);
-          parseExifPayload(chunk, bucket);
-          addPresenceFallback(bucket, beforeCount, "EXIF");
-        } else if (type === "XMP ") {
-          const beforeCount = bucketValueCount(bucket);
-          parseXmpMetadata(utf8Decoder.decode(chunk), bucket);
-          addPresenceFallback(bucket, beforeCount, "XMP");
-        } else if (type === "ICCP") {
-          addField(bucket, "Profile", "ICC profile");
-        } else if (!webpIgnoredChunks.has(type)) {
-          addOtherMetadata(bucket, `WebP ${type.trim() || type}`);
-        }
-
-        offset = dataEnd + (length % 2);
+        else if (type === "pHYs") addField(bucket, "Resolution Marker", "pHYs DPI chunk");
+        offset += 12 + length;
       }
     }
 
     function parseJpegMetadata(bytes, bucket) {
-      if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) {
-        return;
-      }
-
       let offset = 2;
       while (offset + 4 <= bytes.length) {
-        if (bytes[offset] !== 0xFF) {
-          break;
-        }
-
+        if (bytes[offset] !== 0xFF) break;
         const marker = bytes[offset + 1];
-        if (marker === 0xDA || marker === 0xD9) {
-          break;
-        }
-
+        if (marker === 0xDA || marker === 0xD9) break;
         const length = (bytes[offset + 2] << 8) + bytes[offset + 3];
-        const dataStart = offset + 4;
-        const dataEnd = offset + 2 + length;
-
-        if (dataEnd > bytes.length) {
-          break;
-        }
-
-        const chunk = bytes.subarray(dataStart, dataEnd);
-
-        if (marker === 0xE1 && readAscii(chunk, 0, 6) === "Exif\0\0") {
-          const beforeCount = bucketValueCount(bucket);
-          parseExifPayload(chunk, bucket);
-          addPresenceFallback(bucket, beforeCount, "EXIF");
-        } else if (marker === 0xE1 && readAscii(chunk, 0, 29) === "http://ns.adobe.com/xap/1.0/\0") {
-          const beforeCount = bucketValueCount(bucket);
-          parseXmpMetadata(utf8Decoder.decode(chunk.subarray(29)), bucket);
-          addPresenceFallback(bucket, beforeCount, "XMP");
+        const chunk = bytes.subarray(offset + 4, offset + 2 + length);
+        if (marker === 0xE1) {
+          if (readAscii(chunk, 0, 6) === "Exif\0\0") parseExifPayload(chunk, bucket);
+          else if (readAscii(chunk, 0, 29).includes("adobe.com/xap")) parseXmpMetadata(utf8Decoder.decode(chunk), bucket);
         } else if (marker === 0xED) {
-          const beforeCount = bucketValueCount(bucket);
-          parseJpegApp13(chunk, bucket);
-          addPresenceFallback(bucket, beforeCount, "IPTC");
-        } else if (marker === 0xE2 && readAscii(chunk, 0, 12) === "ICC_PROFILE\0") {
-          addField(bucket, "Profile", "ICC profile");
-        } else if (marker === 0xFE) {
-          addField(bucket, "Comment", latin1Decoder.decode(chunk));
-        } else if (marker >= 0xE0 && marker <= 0xEF) {
-          const app = marker - 0xE0;
-          const isJfif = marker === 0xE0 && (readAscii(chunk, 0, 5) === "JFIF\0" || readAscii(chunk, 0, 5) === "JFXX\0");
-          const isAdobe = marker === 0xEE && readAscii(chunk, 0, 6) === "Adobe\0";
-          if (!isJfif && !isAdobe) {
-            addOtherMetadata(bucket, `JPEG APP${app}`);
-          }
+          addField(bucket, "Photoshop IPTC", "IPTC APP13 Record");
         }
-
-        offset = dataEnd;
+        offset += 2 + length;
       }
     }
 
-    function decodePossiblyUtf8(bytes) {
-      const utf8 = cleanText(utf8Decoder.decode(bytes));
-      if (utf8) {
-        return utf8;
+    function parseWebpMetadata(bytes, bucket) {
+      let offset = 12;
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      while (offset + 8 <= bytes.length) {
+        const type = readAscii(bytes, offset, 4);
+        const length = view.getUint32(offset + 4, true);
+        const chunk = bytes.subarray(offset + 8, offset + 8 + length);
+        if (type === "EXIF") parseExifPayload(chunk, bucket);
+        else if (type === "XMP ") parseXmpMetadata(utf8Decoder.decode(chunk), bucket);
+        offset += 8 + length + (length % 2);
       }
-      return cleanText(latin1Decoder.decode(bytes));
-    }
-
-    function parseIptcData(bytes, bucket) {
-      let offset = 0;
-      while (offset + 5 <= bytes.length) {
-        if (bytes[offset] !== 0x1C) {
-          offset += 1;
-          continue;
-        }
-
-        const record = bytes[offset + 1];
-        const dataset = bytes[offset + 2];
-        let size = (bytes[offset + 3] << 8) + bytes[offset + 4];
-        let headerSize = 5;
-
-        if (bytes[offset + 3] & 0x80) {
-          const extendedBytes = bytes[offset + 4] & 0x7F;
-          if (offset + 5 + extendedBytes > bytes.length) {
-            break;
-          }
-          size = 0;
-          for (let index = 0; index < extendedBytes; index += 1) {
-            size = (size << 8) + bytes[offset + 5 + index];
-          }
-          headerSize += extendedBytes;
-        }
-
-        const dataStart = offset + headerSize;
-        const dataEnd = dataStart + size;
-        if (dataEnd > bytes.length) {
-          break;
-        }
-
-        const label = iptcDatasetDefinitions[`${record}:${dataset}`];
-        if (label) {
-          const value = decodePossiblyUtf8(bytes.subarray(dataStart, dataEnd));
-          if (label === "Captured") {
-            addField(bucket, label, formatExifDate(value));
-          } else {
-            addField(bucket, label, value);
-          }
-        }
-
-        offset = dataEnd;
-      }
-    }
-
-    function parseJpegApp13(bytes, bucket) {
-      const header = "Photoshop 3.0\0";
-      if (!readAscii(bytes, 0, header.length).startsWith("Photoshop 3.0")) {
-        return;
-      }
-
-      let offset = header.length;
-      while (offset + 12 <= bytes.length) {
-        const signature = readAscii(bytes, offset, 4);
-        if (signature !== "8BIM") {
-          break;
-        }
-
-        const resourceId = (bytes[offset + 4] << 8) + bytes[offset + 5];
-        const nameLength = bytes[offset + 6];
-        let cursor = offset + 7 + nameLength;
-        if ((1 + nameLength) % 2 === 1) {
-          cursor += 1;
-        }
-        if (cursor + 4 > bytes.length) {
-          break;
-        }
-
-        const size = (bytes[cursor] << 24) + (bytes[cursor + 1] << 16) + (bytes[cursor + 2] << 8) + bytes[cursor + 3];
-        const dataStart = cursor + 4;
-        const dataEnd = dataStart + size;
-        if (dataEnd > bytes.length) {
-          break;
-        }
-
-        const data = bytes.subarray(dataStart, dataEnd);
-        if (resourceId === 0x0404) {
-          parseIptcData(data, bucket);
-        }
-
-        offset = dataEnd + (size % 2);
-      }
-    }
-
-    function parseCaBXMetadata(bytes, bucket) {
-      const strings = extractPrintableStrings(bytes, 4);
-      const text = strings.join("\n");
-
-      addField(bucket, "C2PA", "Present");
-
-      const manifestId = text.match(/urn:c2pa:[0-9a-f-]{16,}/i);
-      if (manifestId) {
-        addField(bucket, "C2PA Manifest", manifestId[0]);
-      }
-
-      const instanceId = text.match(/xmp:iid:[0-9a-f-]{16,}/i);
-      if (instanceId) {
-        addField(bucket, "Instance ID", instanceId[0]);
-      }
-
-      const generator = text.match(/OpenAI Media Service API|OpenAI [^\n]{0,80}Service/i);
-      if (generator) {
-        addField(bucket, "Generator", generator[0]);
-      }
-
-      const actionMatches = Array.from(text.matchAll(/c2pa\.(created|converted|opened|edited|cropped|filtered|exported|resized|transcoded)/gi))
-        .map((match) => match[1].toLowerCase());
-      if (actionMatches.length) {
-        const labels = actionMatches.map((action) => action.charAt(0).toUpperCase() + action.slice(1));
-        addField(bucket, "Actions", Array.from(new Set(labels)).join(", "));
-      }
-
-      const specVersion = text.match(/specVersion.?([0-9]+\.[0-9]+(?:\.[0-9]+)?)/i);
-      if (specVersion) {
-        addField(bucket, "C2PA Version", specVersion[1]);
-      }
-
-      const filenameString = strings.find((value) => /\b[\w.-]+\.(png|jpg|jpeg|webp|avif|heic)\b/i.test(value));
-      if (filenameString) {
-        const match = filenameString.match(/\b[\w.-]+\.(png|jpg|jpeg|webp|avif|heic)\b/i);
-        if (match) {
-          addField(bucket, "Title", match[0]);
-        }
-      }
-
-      if (/c2pa\.claim\.v2/i.test(text)) {
-        addField(bucket, "Claim", "Present");
-      }
-
-      if (/c2pa\.signature/i.test(text)) {
-        addField(bucket, "Signature", "Present");
-      }
-
-      if (/c2pa\.certificate-status/i.test(text) || /SSL\.com C2PA/i.test(text)) {
-        addField(bucket, "Certificate", "Present");
-      }
-
-      if (/OpenAI TSA/i.test(text) || /sigTst/i.test(text) || /tstTokens/i.test(text)) {
-        addField(bucket, "Timestamp", "Present");
-      }
-    }
-
-    function mapTextMetadata(keyword, value, bucket) {
-      const key = cleanText(keyword).toLowerCase();
-      const text = cleanText(value);
-      if (!text) {
-        return;
-      }
-
-      if (key === "author" || key === "artist") {
-        addField(bucket, "Artist", text);
-        return;
-      }
-
-      if (key === "software" || key === "creator") {
-        addField(bucket, "Software", text);
-        return;
-      }
-
-      if (key === "comment") {
-        addField(bucket, "Comment", text);
-        return;
-      }
-
-      if (key === "description" || key === "parameters" || key === "prompt") {
-        addField(bucket, "Description", text);
-        return;
-      }
-
-      if (key === "creation time" || key === "date:create") {
-        addField(bucket, "Captured", formatExifDate(text));
-        return;
-      }
-
-      addField(bucket, humanizeKeyword(keyword), text);
     }
 
     async function inspectMetadata(file) {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const bucket = new Map();
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8) parseJpegMetadata(bytes, bucket);
+      else if (readAscii(bytes, 0, 8) === "\x89PNG\r\n\x1a\n") await parsePngMetadata(bytes, bucket);
+      else if (readAscii(bytes, 0, 4) === "RIFF" && readAscii(bytes, 8, 4) === "WEBP") parseWebpMetadata(bytes, bucket);
 
-      if (bytes.length >= 4 && bytes[0] === 0xFF && bytes[1] === 0xD8) {
-        parseJpegMetadata(bytes, bucket);
-      } else if (bytes.length >= 12 && readAscii(bytes, 0, 8) === "\x89PNG\r\n\x1a\n") {
-        await parsePngMetadata(bytes, bucket);
-      } else if (bytes.length >= 12 && readAscii(bytes, 0, 4) === "RIFF" && readAscii(bytes, 8, 4) === "WEBP") {
-        parseWebpMetadata(bytes, bucket);
-      }
-
-      const entries = Array.from(bucket.entries()).map(([label, values]) => ({
+      return Array.from(bucket.entries()).map(([label, values]) => ({
         label,
-        value: Array.from(values).join(" · "),
+        value: Array.from(values).join(" · ")
       }));
-
-      entries.sort((left, right) => {
-        const leftIndex = labelOrder.indexOf(left.label);
-        const rightIndex = labelOrder.indexOf(right.label);
-        const priorityDiff = (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
-        return priorityDiff || left.label.localeCompare(right.label);
-      });
-
-      return entries;
     }
 
-    function revokeDownload() {
-      if (state.downloadUrl) {
-        URL.revokeObjectURL(state.downloadUrl);
-        state.downloadUrl = null;
-      }
+    function formatBytes(bytes) {
+      if (!bytes || bytes <= 0) return "0 B";
+      const u = ["B", "KB", "MB", "GB"];
+      const e = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), u.length - 1);
+      return `${(bytes / (1024 ** e)).toFixed(e === 0 ? 0 : 2)} ${u[e]}`;
     }
 
-    function setMark(mode) {
-      if (mode === "processing") {
-        elements.mark.innerHTML = '<div class="spinner" aria-hidden="true"></div>';
-        return;
-      }
+    // UI Elements
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const dropTitle = document.getElementById("dropTitle");
+    const dropHint = document.getElementById("dropHint");
+    const dropSpinner = document.getElementById("dropSpinner");
+    const resultsContainer = document.getElementById("resultsContainer");
+    const auditStatus = document.getElementById("auditStatus");
+    const auditBadge = document.getElementById("auditBadge");
+    const auditExplanation = document.getElementById("auditExplanation");
+    const auditTagsPreview = document.getElementById("auditTagsPreview");
+    const imagePreview = document.getElementById("imagePreview");
+    const previewStats = document.getElementById("previewStats");
+    const origSizeVal = document.getElementById("origSizeVal");
+    const cleanSizeVal = document.getElementById("cleanSizeVal");
+    const tagsCountVal = document.getElementById("tagsCountVal");
+    const downloadCleanBtn = document.getElementById("downloadCleanBtn");
+    const copyClipboardBtn = document.getElementById("copyClipboardBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const metadataTableBody = document.getElementById("metadataTableBody");
+    const tableCountLabel = document.getElementById("tableCountLabel");
+    const formatSelect = document.getElementById("formatSelect");
+    const qualityControl = document.getElementById("qualityControl");
+    const qualityRange = document.getElementById("qualityRange");
+    const qualityVal = document.getElementById("qualityVal");
+    const batchSection = document.getElementById("batchSection");
+    const batchList = document.getElementById("batchList");
+    const batchCount = document.getElementById("batchCount");
+    const downloadAllZipBtn = document.getElementById("downloadAllZipBtn");
 
-      if (mode === "ready") {
-        elements.mark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg>';
-        return;
-      }
+    let currentCleanBlob = null;
+    let batchQueue = [];
 
-      if (mode === "error") {
-        elements.mark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"/><path d="M12 16h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
-        return;
-      }
+    // Format & Quality changes
+    formatSelect.addEventListener("change", () => {
+      const isLossy = formatSelect.value === "image/jpeg" || formatSelect.value === "image/webp";
+      qualityControl.style.display = isLossy ? "flex" : "none";
+    });
+    qualityRange.addEventListener("input", (e) => {
+      qualityVal.textContent = `${e.target.value}%`;
+    });
 
-      elements.mark.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V6"/><path d="m8.5 9.5 3.5-3.5 3.5 3.5"/><path d="M5.5 18h13"/></svg>';
+    function getOptions() {
+      const fmt = formatSelect.value === "auto" ? null : formatSelect.value;
+      const q = Number(qualityRange.value) / 100;
+      return { format: fmt, quality: q };
     }
 
-    function renderMetadata(entries) {
-      elements.metadataList.innerHTML = "";
-      elements.metadataEmpty.hidden = entries.length > 0;
-
-      for (const entry of entries) {
-        const row = document.createElement("div");
-        row.className = "metadata-row";
-
-        const term = document.createElement("dt");
-        term.textContent = entry.label;
-
-        const description = document.createElement("dd");
-        description.textContent = entry.value;
-
-        row.append(term, description);
-        elements.metadataList.append(row);
-      }
-    }
-
-    function setView(mode, options = {}) {
-      state.mode = mode;
-      elements.dropzone.dataset.state = mode;
-      setMark(mode);
-      elements.subtle.classList.toggle("error", mode === "error");
-
-      if (mode === "idle") {
-        elements.title.textContent = "Drop image";
-        elements.subtle.textContent = "or click anywhere";
-        elements.summary.hidden = true;
-        elements.actions.hidden = true;
-        return;
-      }
-
-      if (mode === "processing") {
-        elements.title.textContent = "Reading metadata";
-        elements.subtle.textContent = options.fileName || "";
-        elements.summary.hidden = true;
-        elements.actions.hidden = true;
-        return;
-      }
-
-      if (mode === "ready") {
-        const fieldCount = options.metadata.length;
-        elements.title.textContent = fieldCount ? `${fieldCount} field${fieldCount === 1 ? "" : "s"} found` : "No metadata found";
-        elements.subtle.textContent = "click anywhere to replace";
-        elements.filename.textContent = options.fileName || "";
-        renderMetadata(options.metadata);
-        elements.summary.hidden = false;
-        elements.actions.hidden = false;
-        return;
-      }
-
-      elements.title.textContent = "Try another image";
-      elements.subtle.textContent = options.message || "Could not process that file.";
-      elements.summary.hidden = true;
-      elements.actions.hidden = true;
-    }
-
-    function resetState() {
-      revokeDownload();
-      elements.fileInput.value = "";
-      elements.downloadButton.removeAttribute("href");
-      elements.downloadButton.removeAttribute("download");
-      setView("idle");
-    }
-
-    async function handleFile(file, runId) {
-      resetState();
-      setView("processing", { fileName: file.name || "" });
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      const [metadata, result] = await Promise.all([
+    // Process a single file
+    async function processFile(file) {
+      const options = getOptions();
+      const [metadata, stripped] = await Promise.all([
         inspectMetadata(file).catch(() => []),
-        stripImageMetadata(file),
+        stripImageMetadata(file, options)
       ]);
-
-      if (runId !== state.runId) {
-        return;
-      }
-
-      state.downloadUrl = URL.createObjectURL(result.blob);
-      elements.downloadButton.href = state.downloadUrl;
-      elements.downloadButton.download = result.outputName;
-
-      setView("ready", {
-        metadata,
-        fileName: result.fileInfo,
-      });
+      return { file, metadata, stripped };
     }
 
-    function onFiles(files) {
-      const [file] = Array.from(files || []);
-      if (!file) {
-        return;
+    // Display Active Result
+    function renderResult(item) {
+      const { file, metadata, stripped } = item;
+      currentCleanBlob = stripped.blob;
+
+      resultsContainer.classList.remove("hidden");
+      const url = URL.createObjectURL(stripped.blob);
+      imagePreview.src = url;
+      previewStats.textContent = `${stripped.width} × ${stripped.height} px · ${stripped.outputType}`;
+
+      origSizeVal.textContent = formatBytes(file.size);
+      cleanSizeVal.textContent = formatBytes(stripped.blob.size);
+      tagsCountVal.textContent = `${metadata.length} tag${metadata.length === 1 ? "" : "s"} purged`;
+
+      downloadCleanBtn.href = url;
+      downloadCleanBtn.download = stripped.outputName;
+
+      // AI Risk Analysis
+      let hasAi = false;
+      let hasGps = false;
+      let tagsHtml = "";
+
+      for (const m of metadata) {
+        const text = (m.label + " " + m.value).toLowerCase();
+        const isAi = text.includes("c2pa") || text.includes("manifest") || text.includes("openai") || text.includes("prompt") || text.includes("midjourney");
+        const isGps = text.includes("gps") || text.includes("latitude") || text.includes("longitude");
+
+        if (isAi) hasAi = true;
+        if (isGps) hasGps = true;
+
+        tagsHtml += `<span class="tag-chip ${isAi ? "danger" : ""}">${m.label}</span>`;
       }
 
-      const runId = ++state.runId;
-      handleFile(file, runId).catch((error) => {
-        if (runId !== state.runId) {
-          return;
+      auditTagsPreview.innerHTML = tagsHtml || '<span style="font-size:12px;color:var(--text-muted);">None detected</span>';
+      tableCountLabel.textContent = `${metadata.length} tags discovered and stripped`;
+
+      if (hasAi) {
+        auditStatus.innerHTML = `<span>🚨 AI Provenance Detected</span>`;
+        auditBadge.className = "audit-badge badge-danger";
+        auditBadge.textContent = "AI Flag Triggered";
+        auditExplanation.innerHTML = `<strong>Attention:</strong> This image contains <strong>C2PA manifests / AI generator metadata</strong>. Platforms like <strong>X (Twitter)</strong>, Instagram, and Facebook will automatically tag it with <strong>"Made with AI"</strong>.<br>✨ <em>MetaClean re-encoded the raw pixels and completely erased these signatures.</em>`;
+      } else if (hasGps) {
+        auditStatus.innerHTML = `<span>📍 Physical Location Tracking Detected</span>`;
+        auditBadge.className = "audit-badge badge-warning";
+        auditBadge.textContent = "Location Leaks";
+        auditExplanation.innerHTML = `<strong>Privacy Alert:</strong> Precise GPS coordinates and device serials were embedded in this file. MetaClean wiped all physical location traces.`;
+      } else {
+        auditStatus.innerHTML = `<span>🛡️ File Sanitized Successfully</span>`;
+        auditBadge.className = "audit-badge badge-success";
+        auditBadge.textContent = "100% Clean";
+        auditExplanation.textContent = `All non-pixel metadata, resolution chunks, and tracking headers have been removed. The image is now pure visual pixels.`;
+      }
+
+      // Metadata Table
+      metadataTableBody.innerHTML = "";
+      if (metadata.length === 0) {
+        metadataTableBody.innerHTML = `<tr><td colspan="2" style="color:var(--text-muted); text-align:center;">No tracking metadata was found in the source file.</td></tr>`;
+      } else {
+        for (const m of metadata) {
+          const row = document.createElement("tr");
+          row.innerHTML = `<th>${m.label}</th><td>${m.value}</td>`;
+          metadataTableBody.appendChild(row);
         }
-        resetState();
-        setView("error", { message: error.message });
-      });
+      }
     }
 
-    ["dragenter", "dragover"].forEach((eventName) => {
-      elements.dropzone.addEventListener(eventName, (event) => {
-        event.preventDefault();
-        if (state.mode !== "processing") {
-          elements.dropzone.dataset.active = "true";
+    // Handle incoming file list
+    async function handleFiles(files) {
+      if (!files || files.length === 0) return;
+      const validFiles = Array.from(files).filter(f => f.type.startsWith("image/"));
+      if (validFiles.length === 0) {
+        alert("Please select valid image files (JPEG, PNG, WebP).");
+        return;
+      }
+
+      dropSpinner.classList.remove("hidden");
+      dropTitle.textContent = `Sanitizing ${validFiles.length} image${validFiles.length > 1 ? "s" : ""}...`;
+
+      try {
+        if (validFiles.length === 1) {
+          batchSection.classList.add("hidden");
+          const item = await processFile(validFiles[0]);
+          renderResult(item);
+        } else {
+          // Batch Mode
+          batchQueue = [];
+          batchList.innerHTML = "";
+          batchSection.classList.remove("hidden");
+          batchCount.textContent = `Batch Processing (${validFiles.length} images)`;
+
+          for (const f of validFiles) {
+            const item = await processFile(f);
+            batchQueue.push(item);
+
+            const row = document.createElement("div");
+            row.className = "batch-item";
+            const cleanUrl = URL.createObjectURL(item.stripped.blob);
+            row.innerHTML = `
+              <div class="batch-item-info">
+                <span>📄</span>
+                <strong>${item.stripped.outputName}</strong>
+                <span style="color:var(--text-muted)">(${formatBytes(item.stripped.blob.size)})</span>
+              </div>
+              <a href="${cleanUrl}" download="${item.stripped.outputName}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;">Download</a>
+            `;
+            batchList.appendChild(row);
+          }
+
+          // Show the first image in preview
+          renderResult(batchQueue[0]);
+        }
+      } catch (err) {
+        alert("Processing error: " + err.message);
+      } finally {
+        dropSpinner.classList.add("hidden");
+        dropTitle.textContent = "Drop images here, browse, or paste";
+      }
+    }
+
+    // ZIP Download for batch
+    downloadAllZipBtn.addEventListener("click", async () => {
+      if (!batchQueue.length || typeof JSZip === "undefined") return;
+      const zip = new JSZip();
+      for (const item of batchQueue) {
+        zip.file(item.stripped.outputName, item.stripped.blob);
+      }
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = "metaclean-batch.zip";
+      a.click();
+    });
+
+    // Copy Clean Image to Clipboard
+    copyClipboardBtn.addEventListener("click", async () => {
+      if (!currentCleanBlob) return;
+      try {
+        // Clipboard API requires image/png
+        let copyBlob = currentCleanBlob;
+        if (copyBlob.type !== "image/png") {
+          const img = new Image();
+          img.src = URL.createObjectURL(copyBlob);
+          await new Promise(r => img.onload = r);
+          const c = document.createElement("canvas");
+          c.width = img.width; c.height = img.height;
+          c.getContext("2d").drawImage(img, 0, 0);
+          copyBlob = await new Promise(r => c.toBlob(r, "image/png"));
+        }
+
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": copyBlob })
+        ]);
+
+        const prev = copyClipboardBtn.textContent;
+        copyClipboardBtn.textContent = "✅ Copied to Clipboard!";
+        copyClipboardBtn.style.color = "var(--success)";
+        setTimeout(() => {
+          copyClipboardBtn.textContent = prev;
+          copyClipboardBtn.style.color = "";
+        }, 2000);
+      } catch (err) {
+        alert("Clipboard copy failed: Browser permissions or format not supported.");
+      }
+    });
+
+    // Reset
+    resetBtn.addEventListener("click", () => {
+      resultsContainer.classList.add("hidden");
+      batchSection.classList.add("hidden");
+      batchQueue = [];
+      fileInput.value = "";
+    });
+
+    // Drag and Drop Events
+    ["dragenter", "dragover"].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+    ["dragleave", "dragend", "drop"].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("dragover");
+        if (name === "drop") {
+          handleFiles(e.dataTransfer && e.dataTransfer.files);
         }
       });
     });
 
-    ["dragleave", "dragend", "drop"].forEach((eventName) => {
-      elements.dropzone.addEventListener(eventName, (event) => {
-        event.preventDefault();
-        if (eventName !== "drop") {
-          elements.dropzone.dataset.active = "false";
-          return;
+    dropzone.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+
+    // Global Paste Support (Ctrl + V)
+    window.addEventListener("paste", (e) => {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      const pastedFiles = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) pastedFiles.push(file);
         }
-
-        elements.dropzone.dataset.active = "false";
-        onFiles(event.dataTransfer && event.dataTransfer.files);
-      });
+      }
+      if (pastedFiles.length > 0) {
+        handleFiles(pastedFiles);
+      }
     });
-
-    elements.dropzone.addEventListener("click", (event) => {
-      if (state.mode === "processing") {
-        return;
-      }
-      if (event.target.closest("#downloadButton")) {
-        return;
-      }
-      elements.fileInput.click();
-    });
-
-    elements.dropzone.addEventListener("keydown", (event) => {
-      if (state.mode === "processing") {
-        return;
-      }
-      if (event.target !== elements.dropzone) {
-        return;
-      }
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-      event.preventDefault();
-      elements.fileInput.click();
-    });
-
-    elements.fileInput.addEventListener("change", (event) => {
-      onFiles(event.target.files);
-    });
-
-    window.addEventListener("beforeunload", revokeDownload);
-
-    setView("idle");
-
-    window.stripMetaApp = {
-      stripImageMetadata,
-      inspectMetadata,
-    };
   </script>
 </body>
 </html>
