@@ -28,7 +28,7 @@ async function makeTweetImage(isClean, outputPath) {
   const badgeSvg = isClean
     ? `<g transform="translate(42, 706)">
          <rect x="0" y="0" width="360" height="34" rx="17" fill="#064e3b" stroke="#059669" stroke-width="1.5"/>
-         <text x="18" y="22" fill="#34d399" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto" font-size="14" font-weight="700">🛡️ Sanitized with MetaClean (No AI Flag)</text>
+         <text x="18" y="22" fill="#34d399" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto" font-size="14" font-weight="700">🛡️ Sanitized with GhostPix (No AI Flag)</text>
        </g>`
     : `<g transform="translate(42, 708)">
          <path d="M10 2L12.2 7.8L18 10L12.2 12.2L10 18L7.8 12.2L2 10L7.8 7.8L10 2Z" fill="#9ca3af"/>
@@ -112,7 +112,7 @@ async function makeScreenshot(outputPath) {
       <circle cx="52" cy="28" r="6" fill="#f59e0b"/>
       <circle cx="72" cy="28" r="6" fill="#10b981"/>
       <text x="${width / 2}" y="34" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto" font-size="14" font-weight="600" text-anchor="middle">
-        MetaClean — AI Provenance &amp; Metadata Stripper
+        GhostPix — AI Provenance &amp; Metadata Stripper
       </text>
       <rect x="${width - 150}" y="16" width="120" height="26" rx="13" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-opacity="0.3"/>
       <text x="${width - 90}" y="33" fill="#10b981" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto" font-size="11" font-weight="700" text-anchor="middle">
@@ -128,7 +128,7 @@ async function makeScreenshot(outputPath) {
         🚨 AI Provenance &amp; C2PA Manifests Detected
       </text>
       <text x="88" y="160" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto" font-size="13">
-        Social platforms (X / Instagram) will label this image as "Made with AI". MetaClean purged all C2PA claims.
+        Social platforms (X / Instagram) will label this image as "Made with AI". GhostPix purged all C2PA claims.
       </text>
 
       <!-- Left Column: Photo Preview Frame -->

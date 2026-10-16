@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetaClean — AI Provenance & Image Metadata Stripper</title>
+  <title>GhostPix — AI Provenance & Image Metadata Stripper</title>
   <meta name="description" content="100% Client-side privacy tool. Remove C2PA 'Made with AI' badges, EXIF, GPS tracking, and prompts from images.">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -502,8 +502,8 @@
         <span class="dot"></span> 100% Client-Side · Zero Data Upload
       </div>
       <div class="logo-title">
-        <img src="icon.svg" alt="MetaClean Logo">
-        <span>MetaClean</span>
+        <img src="icon.svg" alt="GhostPix Logo">
+        <span>GhostPix</span>
       </div>
       <p>
         Strip hidden <strong>C2PA AI credentials</strong> ("Made with AI" labels), GPS coordinates, camera serials, and prompts before sharing online.
@@ -639,11 +639,11 @@
   </div>
 
   <footer>
-    <div>Built for privacy · 100% In-Browser · <a href="https://github.com/8aditya8/metaclean" target="_blank" rel="noopener">GitHub Repository</a></div>
+    <div>Built for privacy · 100% In-Browser · <a href="https://github.com/8aditya8/ghostpix" target="_blank" rel="noopener">GitHub Repository</a></div>
   </footer>
 
   <script type="module">
-    import { stripImageMetadata } from "./metaclean.js";
+    import { stripImageMetadata } from "./ghostpix.js";
 
     // Decoders
     const utf8Decoder = new TextDecoder("utf-8");
@@ -946,12 +946,12 @@
         auditStatus.innerHTML = `<span>🚨 AI Provenance Detected</span>`;
         auditBadge.className = "audit-badge badge-danger";
         auditBadge.textContent = "AI Flag Triggered";
-        auditExplanation.innerHTML = `<strong>Attention:</strong> This image contains <strong>C2PA manifests / AI generator metadata</strong>. Platforms like <strong>X (Twitter)</strong>, Instagram, and Facebook will automatically tag it with <strong>"Made with AI"</strong>.<br>✨ <em>MetaClean re-encoded the raw pixels and completely erased these signatures.</em>`;
+        auditExplanation.innerHTML = `<strong>Attention:</strong> This image contains <strong>C2PA manifests / AI generator metadata</strong>. Platforms like <strong>X (Twitter)</strong>, Instagram, and Facebook will automatically tag it with <strong>"Made with AI"</strong>.<br>✨ <em>GhostPix re-encoded the raw pixels and completely erased these signatures.</em>`;
       } else if (hasGps) {
         auditStatus.innerHTML = `<span>📍 Physical Location Tracking Detected</span>`;
         auditBadge.className = "audit-badge badge-warning";
         auditBadge.textContent = "Location Leaks";
-        auditExplanation.innerHTML = `<strong>Privacy Alert:</strong> Precise GPS coordinates and device serials were embedded in this file. MetaClean wiped all physical location traces.`;
+        auditExplanation.innerHTML = `<strong>Privacy Alert:</strong> Precise GPS coordinates and device serials were embedded in this file. GhostPix wiped all physical location traces.`;
       } else {
         auditStatus.innerHTML = `<span>🛡️ File Sanitized Successfully</span>`;
         auditBadge.className = "audit-badge badge-success";
@@ -1035,7 +1035,7 @@
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(zipBlob);
-      a.download = "metaclean-batch.zip";
+      a.download = "ghostpix-batch.zip";
       a.click();
     });
 

@@ -1,4 +1,4 @@
-# MetaClean 🧼
+# GhostPix 🧼
 
 > **Privacy-first image metadata, EXIF, GPS, and C2PA AI tag remover.**  
 > Runs **100% locally** in your browser or from your terminal — no server, no uploads, zero tracking.
@@ -7,16 +7,16 @@
 
 ---
 
-## 🎯 Why MetaClean?
+## 🎯 Why GhostPix?
 
 ### 1. Remove "Made with AI" Badges on Social Media
 Social media platforms (like X/Twitter, Instagram, Facebook) inspect images for embedded **C2PA / Content Authenticity** metadata and automatically slap a **"Made with AI"** badge on them.
 
-| Before (Original AI Image) | After (Cleaned with MetaClean) |
+| Before (Original AI Image) | After (Cleaned with GhostPix) |
 | :---: | :---: |
 | ![Before](assets/example.png) | ![After](assets/after.png) |
 
-MetaClean purges the cryptographic C2PA manifests, certificates, and signature blocks, returning a clean image.
+GhostPix purges the cryptographic C2PA manifests, certificates, and signature blocks, returning a clean image.
 
 ### 2. Protect Your Physical Privacy & Location
 Smartphone and digital camera photos embed sensitive data:
@@ -25,7 +25,7 @@ Smartphone and digital camera photos embed sensitive data:
 * **Exact timestamp and dates**
 * **Device software and computer usernames**
 
-MetaClean strips all of this before you publish images online.
+GhostPix strips all of this before you publish images online.
 
 ---
 
@@ -37,22 +37,22 @@ MetaClean strips all of this before you publish images online.
 3. Drag and drop any image.
 4. Preview the detected metadata and click **Download Clean Image**.
 
-👉 **[Click here to use the Live Web App](https://8aditya8.github.io/metaclean/)** (Hosted free on GitHub Pages)
+👉 **[Click here to use the Live Web App](https://8aditya8.github.io/ghostpix/)** (Hosted free on GitHub Pages)
 
 ### 💻 In the Terminal (CLI)
 
 ```bash
 # Run directly with npx
-npx metaclean ./image.png
+npx ghostpix ./image.png
 
 # Specify output destination
-npx metaclean ./image.png ./image-clean.png
+npx ghostpix ./image.png ./image-clean.png
 
 # Convert format during cleaning
-npx metaclean ./image.png --format webp
+npx ghostpix ./image.png --format webp
 
 # Specify custom output path
-npx metaclean ./image.png --output ./dist/clean.jpg
+npx ghostpix ./image.png --output ./dist/clean.jpg
 ```
 
 ---
@@ -69,7 +69,7 @@ npx metaclean ./image.png --output ./dist/clean.jpg
 
 ## 🔬 How It Works Under The Hood
 
-Rather than trying to find and delete individual metadata tags (which can miss newer tags or corrupt file headers), MetaClean uses **Pixel Re-encoding**:
+Rather than trying to find and delete individual metadata tags (which can miss newer tags or corrupt file headers), GhostPix uses **Pixel Re-encoding**:
 
 1. **Pure Decoded Pixels:** The browser/Node engine decodes only raw visual RGB/RGBA pixels into memory.
 2. **Clean Canvas Paint:** The raw pixels are painted onto a clean `<canvas>` surface with no file headers or metadata fields attached.
@@ -83,12 +83,12 @@ Because no original header bytes or metadata blocks are copied over, **100% of h
 ## 📦 Project Structure
 
 ```text
-metaclean/
+ghostpix/
 ├── index.html          # Standalone, single-page web application
-├── metaclean.js        # Browser canvas re-encoding engine
-├── metaclean-node.js   # Node.js Sharp-based image cleaning engine
+├── ghostpix.js        # Browser canvas re-encoding engine
+├── ghostpix-node.js   # Node.js Sharp-based image cleaning engine
 ├── bin/
-│   └── metaclean.js    # CLI entry point (Node.js executable)
+│   └── ghostpix.js    # CLI entry point (Node.js executable)
 ├── assets/             # Screenshots and documentation examples
 ├── icon.svg            # Project logo
 ├── package.json        # Node.js package & script configurations

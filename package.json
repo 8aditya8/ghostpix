@@ -1,23 +1,24 @@
 {
-  "name": "metaclean",
+  "name": "ghostpix",
   "version": "1.0.0",
-  "description": "Strip image metadata, EXIF, GPS, and C2PA AI tags locally in the browser or from the terminal.",
+  "description": "Privacy-first image metadata, EXIF, GPS, and C2PA AI tag remover — works 100% locally in browser or terminal.",
   "type": "module",
   "bin": {
-    "metaclean": "./bin/metaclean.js"
+    "ghostpix": "./bin/ghostpix.js"
   },
   "exports": {
-    ".": "./metaclean-node.js",
-    "./browser": "./metaclean.js"
+    ".": "./ghostpix-node.js",
+    "./browser": "./ghostpix.js"
   },
   "files": [
     "assets/",
     "bin/",
     "icon.svg",
     "index.html",
+    "control-center.html",
     "README.md",
-    "metaclean.js",
-    "metaclean-node.js"
+    "ghostpix.js",
+    "ghostpix-node.js"
   ],
   "engines": {
     "node": ">=18.17"
@@ -30,6 +31,7 @@
     "privacy",
     "c2pa",
     "ai-detection",
+    "ghostpix",
     "sanitizer"
   ],
   "dependencies": {

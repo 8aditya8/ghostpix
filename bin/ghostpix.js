@@ -3,13 +3,13 @@
 const supportedFormats = new Set(["jpg", "png", "webp"]);
 
 function printUsage() {
-  console.log(`Usage: npx metaclean <source> [target] [--format <jpg|png|webp>] [--output <path>]
+  console.log(`Usage: npx ghostpix <source> [target] [--format <jpg|png|webp>] [--output <path>]
 
 Examples:
-  npx metaclean ./image.png
-  npx metaclean ./image.png ./image-clean.png
-  npx metaclean ./image.png --format webp
-  npx metaclean ./image.png --output ./custom/output.png`);
+  npx ghostpix ./image.png
+  npx ghostpix ./image.png ./image-clean.png
+  npx ghostpix ./image.png --format webp
+  npx ghostpix ./image.png --output ./custom/output.png`);
 }
 
 function parseArgs(argv) {
@@ -87,7 +87,7 @@ async function main() {
     process.exit(options.help ? 0 : 1);
   }
 
-  const { stripImageFile } = await import("../metaclean-node.js");
+  const { stripImageFile } = await import("../ghostpix-node.js");
   const result = await stripImageFile(inputPath, options);
   console.log(result.outputPath);
 }
