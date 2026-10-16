@@ -37,7 +37,7 @@ MetaClean strips all of this before you publish images online.
 3. Drag and drop any image.
 4. Preview the detected metadata and click **Download Clean Image**.
 
-*(You can also host this repository on **GitHub Pages** for free instant hosting!)*
+👉 **[Click here to use the Live Web App](https://8aditya8.github.io/metaclean/)** (Hosted free on GitHub Pages)
 
 ### 💻 In the Terminal (CLI)
 
